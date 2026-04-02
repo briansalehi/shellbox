@@ -1,4 +1,4 @@
-# Arch Linux Installation Considerations
+# Linux Shell Toolbox
 
 Following steps are already on [arch
 wiki](https://wiki.archlinux.org/title/Installation_guide) page, but they are

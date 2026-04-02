@@ -1,0 +1,136 @@
+{
+  "plugins": {
+    "ale": {
+      "rev": "ba8b9cbab95131e284c5be926642f803b2be0058",
+      "src": "https://github.com/dense-analysis/ale"
+    },
+    "awesome-vim-colorschemes": {
+      "rev": "ae5e02298c8de6a5aa98fe4d29a21874cfcc3619",
+      "src": "https://github.com/rafi/awesome-vim-colorschemes"
+    },
+    "bullets.vim": {
+      "rev": "89294b8930e660936374fb763ac48a1ac51dd29c",
+      "src": "https://github.com/dkarter/bullets.vim"
+    },
+    "completion-nvim": {
+      "rev": "87b0f86da3dffef63b42845049c648b5d90f1c4d",
+      "src": "https://github.com/nvim-lua/completion-nvim"
+    },
+    "dashboard-nvim": {
+      "rev": "0775e567b6c0be96d01a61795f7b64c1758262f6",
+      "src": "https://github.com/glepnir/dashboard-nvim"
+    },
+    "delimitMate": {
+      "rev": "becbd2d353a2366171852387288ebb4b33a02487",
+      "src": "https://github.com/Raimondi/delimitMate"
+    },
+    "fd": {
+      "rev": "7cf8c85113676f299543333ef7e04db64a678689",
+      "src": "https://github.com/sharkdp/fd"
+    },
+    "git-blame.vim": {
+      "rev": "9d144b7bed5d8f1c9259551768b7f3b3d1294917",
+      "src": "https://github.com/zivyangll/git-blame.vim"
+    },
+    "nerdtree": {
+      "rev": "690d061b591525890f1471c6675bcb5bdc8cdff9",
+      "src": "https://github.com/scrooloose/nerdtree"
+    },
+    "nvim-gdb": {
+      "rev": "b644f07c54608cc913c1d9e14954f15dcb7331a9",
+      "src": "https://github.com/sakhnik/nvim-gdb"
+    },
+    "nvim-lastplace": {
+      "rev": "0bb6103c506315044872e0f84b1f736c4172bb20",
+      "src": "https://github.com/ethanholz/nvim-lastplace"
+    },
+    "nvim-lspconfig": {
+      "rev": "8e2084bf5e40c79c1f42210a6ef96a0a4793a763",
+      "src": "https://github.com/neovim/nvim-lspconfig"
+    },
+    "nvim-surround": {
+      "rev": "19e39478ccf5fa2eefdb3595af2f2927d0ff2416",
+      "src": "https://github.com/kylechui/nvim-surround"
+    },
+    "nvim-terminal": {
+      "rev": "45cb88d0d62215c33414f5fa2967331d348c8c12",
+      "src": "https://github.com/s1n7ax/nvim-terminal"
+    },
+    "nvim-treesitter": {
+      "rev": "c82bf96f0a773d85304feeb695e1e23b2207ac35",
+      "src": "https://github.com/nvim-treesitter/nvim-treesitter"
+    },
+    "nvim-web-devicons": {
+      "rev": "d7462543c9e366c0d196c7f67a945eaaf5d99414",
+      "src": "https://github.com/nvim-tree/nvim-web-devicons"
+    },
+    "onedark.vim": {
+      "rev": "47bec7a6196a843dad195d2666c3ac84c6e80c78",
+      "src": "https://github.com/joshdick/onedark.vim"
+    },
+    "plenary": {
+      "rev": "b9fd5226c2f76c951fc8ed5923d85e4de065e509",
+      "src": "https://github.com/nvim-lua/plenary.nvim"
+    },
+    "plenary.nvim": {
+      "rev": "b9fd5226c2f76c951fc8ed5923d85e4de065e509",
+      "src": "https://github.com/nvim-lua/plenary.nvim"
+    },
+    "ripgrep": {
+      "rev": "4519153e5e461527f4bca45b042fff45c4ec6fb9",
+      "src": "https://github.com/BurntSushi/ripgrep"
+    },
+    "tagbar": {
+      "rev": "7bfffca1f121afb7a9e38747500bf5270e006bb1",
+      "src": "https://github.com/preservim/tagbar"
+    },
+    "telescope-fzf-native.nvim": {
+      "rev": "6fea601bd2b694c6f2ae08a6c6fab14930c60e2c",
+      "src": "https://github.com/nvim-telescope/telescope-fzf-native.nvim"
+    },
+    "telescope.nvim": {
+      "rev": "cfb85dcf7f822b79224e9e6aef9e8c794211b20b",
+      "src": "https://github.com/nvim-telescope/telescope.nvim"
+    },
+    "tokyonight.nvim": {
+      "rev": "cdc07ac78467a233fd62c493de29a17e0cf2b2b6",
+      "src": "https://github.com/folke/tokyonight.nvim"
+    },
+    "trailertrash.vim": {
+      "rev": "d4109aac96972ae759b389d3b374c1f4c058ee4f",
+      "src": "https://github.com/csexton/trailertrash.vim"
+    },
+    "vim-airline": {
+      "rev": "512456e425409ec58627bd839fbb85d449d8cbc1",
+      "src": "https://github.com/vim-airline/vim-airline.git"
+    },
+    "vim-cmake": {
+      "rev": "896bc2189c8ade62d00a0ebedc59c65d9d9b0d65",
+      "src": "https://github.com/cdelledonne/vim-cmake"
+    },
+    "vim-commentary": {
+      "rev": "64a654ef4a20db1727938338310209b6a63f60c9",
+      "src": "https://github.com/tpope/vim-commentary"
+    },
+    "vim-fugitive": {
+      "rev": "3b753cf8c6a4dcde6edee8827d464ba9b8c4a6f0",
+      "src": "https://github.com/tpope/vim-fugitive"
+    },
+    "vim-lastplace": {
+      "rev": "e58cb0df716d3c88605ae49db5c4741db8b48aa9",
+      "src": "https://github.com/farmergreg/vim-lastplace"
+    },
+    "vim-livedown": {
+      "rev": "24c78c0c1177c0231bb542fa1e3807a3b089248e",
+      "src": "https://github.com/shime/vim-livedown"
+    },
+    "vim-maximizer": {
+      "rev": "2e54952fe91e140a2e69f35f22131219fcd9c5f1",
+      "src": "https://github.com/szw/vim-maximizer"
+    },
+    "vimspector": {
+      "rev": "409005fac4f014b271ed3526f3c0d08c4d42ed19",
+      "src": "https://github.com/puremourning/vimspector"
+    }
+  }
+}
