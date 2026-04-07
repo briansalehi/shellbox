@@ -85,7 +85,7 @@ vim.pack.add({'https://github.com/neovim/nvim-lspconfig'})
 vim.pack.add({'https://github.com/zivyangll/git-blame.vim'})
 
 -- vim airline
-vim.pack.add({'https://github.com/vim-airline/vim-airline.git'})
+-- vim.pack.add({'https://github.com/vim-airline/vim-airline.git'})
 
 -- nerd tree
 vim.pack.add({'https://github.com/scrooloose/nerdtree'})

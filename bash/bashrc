@@ -111,23 +111,12 @@ else
 fi
 
 # make local executables and libraries visible
+unset LD_LIBRARY_PATH
 include_path $ANDROID_HOME/cmdline-tools/latest
 include_path $ANDROID_HOME/platform-tools
-include_path /usr/local/share/qt/[5,6]*/gcc_64
 include_path /opt/clion/latest
-include_path /opt/x-tools/*/bin
-include_path /opt/Qt/*/gcc_64
-include_path /opt/Qt/Tools/*
-include_path /opt/Qt/Tools/QtDesignStudio/lib/Qt
-include_path /opt/Qt/Tools/QtInstallerFramework/*
-include_path /opt/qt/*/gcc_64
-include_path /opt/qt/Tools/*
-include_path /opt/qt/Tools/QtDesignStudio/lib/Qt
-include_path /opt/homebrew
-include_path $HOME/.local/src/qt*/[5,6]*/gcc_64
-include_path $HOME/.local/x-tools/*/bin
+include_path /opt/qt/6.10.0/gcc_64
 include_path $HOME/.local/src/clion
-include_path $HOME/.local/src/bitbake
 include_path $HOME/.dotnet
 include_path $HOME/.cargo
 include_path $HOME/projects/pgenv
