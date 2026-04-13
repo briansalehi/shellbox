@@ -1,11 +1,15 @@
+local capabilities = require('cmp_nvim_lsp').default_capabilities()
+
 vim.lsp.enable("clangd")
+
+-- pass cmp capabilities to all servers
+vim.lsp.config('*', { capabilities = capabilities })
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
     local buf = args.buf
     local map = vim.keymap.set
-    local buf = args.buf
 
     -- key mapping
     map("n", "gd", vim.lsp.buf.definition, { buffer = buf })
@@ -16,11 +20,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("n", "<leader>rn", vim.lsp.buf.rename, { buffer = buf })
     map("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf })
 
-    -- enable completion
-    if client:supports_method("textDocument/completion") then
-      vim.lsp.completion.enable(true, args.data.client_id, buf, {
-        autotrigger = true,
-      })
+    -- signature help
+    if client:supports_method("textDocument/signatureHelp") then
+      map("i", "<C-s>", vim.lsp.buf.signature_help, { buffer = buf })
     end
   end,
 })

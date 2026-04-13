@@ -81,6 +81,49 @@ require("nvim-terminal").setup({
 -- nvim lsp config
 vim.pack.add({'https://github.com/neovim/nvim-lspconfig'})
 
+-- completion
+vim.pack.add({
+    'https://github.com/hrsh7th/nvim-cmp',
+    'https://github.com/hrsh7th/cmp-nvim-lsp',
+    'https://github.com/hrsh7th/cmp-buffer',
+    'https://github.com/L3MON4D3/LuaSnip',
+    'https://github.com/saadparwaiz1/cmp_luasnip',
+})
+
+local cmp = require('cmp')
+local luasnip = require('luasnip')
+
+cmp.setup({
+    snippet = {
+        expand = function(args)
+            luasnip.lsp_expand(args.body)
+        end,
+    },
+    mapping = cmp.mapping.preset.insert({
+        ['<C-Space>'] = cmp.mapping.complete(),
+        ['<C-e>']     = cmp.mapping.abort(),
+        ['<CR>']      = cmp.mapping.confirm({ select = false }),
+        ['<Tab>']     = cmp.mapping(function(fallback)
+            if cmp.visible() then cmp.select_next_item()
+            elseif luasnip.expand_or_jumpable() then luasnip.expand_or_jump()
+            else fallback() end
+        end, { 'i', 's' }),
+        ['<S-Tab>']   = cmp.mapping(function(fallback)
+            if cmp.visible() then cmp.select_prev_item()
+            elseif luasnip.jumpable(-1) then luasnip.jump(-1)
+            else fallback() end
+        end, { 'i', 's' }),
+        ['<C-k>']     = cmp.mapping.scroll_docs(-4),
+        ['<C-j>']     = cmp.mapping.scroll_docs(4),
+    }),
+    sources = cmp.config.sources({
+        { name = 'nvim_lsp' },
+        { name = 'luasnip' },
+    }, {
+        { name = 'buffer' },
+    }),
+})
+
 -- git blame
 vim.pack.add({'https://github.com/zivyangll/git-blame.vim'})
 
@@ -104,8 +147,6 @@ vim.pack.add({'https://github.com/dense-analysis/ale'})
 -- vim.pack.add({'https://github.com/octol/vim-cpp-enhanced-highlight'})
 vim.pack.add({'https://github.com/cdelledonne/vim-cmake'})
 
-vim.pack.add({'https://github.com/Raimondi/delimitMate'})
-
 -- git plugin
 vim.pack.add({'https://github.com/tpope/vim-fugitive'})
 
@@ -119,13 +160,13 @@ vim.pack.add({'https://github.com/szw/vim-maximizer'})
 vim.pack.add({'https://github.com/csexton/trailertrash.vim'})
 
 
--- vim.pack.add({'https://github.com/puremourning/vimspector'})
+vim.pack.add({'https://github.com/puremourning/vimspector'})
 
 -- gdb plugin
 vim.pack.add({'https://github.com/sakhnik/nvim-gdb'})
 
 -- code completion
-vim.pack.add({'https://github.com/nvim-lua/completion-nvim'})
+-- vim.pack.add({'https://github.com/nvim-lua/completion-nvim'})
 
 -- vim.pack.add({'https://github.com/Valloric/YouCompleteMe'})
 -- vim.pack.add({'https://github.com/neoclide/coc.nvim'})
