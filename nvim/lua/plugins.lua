@@ -1,3 +1,17 @@
+-- abandoned
+-- vim.pack.add({'https://github.com/puremourning/vimspector'}) -- duplicates nvim-gdb
+-- vim.pack.add({'https://github.com/dense-analysis/ale'}) -- conflicts with already using vim.lsp
+-- vim.pack.add({'https://github.com/neovim/nvim-lspconfig'}) -- conflicts with already using vim.lsp
+-- vim.pack.add({'https://github.com/Valloric/YouCompleteMe'}) -- conflicts with already using vim.lsp and nvim-cmp
+-- vim.pack.add({'https://github.com/neoclide/coc.nvim'}) -- conflicts with already using vim.lsp
+-- vim.pack.add({'https://github.com/ms-jpq/coq_nvim'}) -- conflicts with already using vim.lsp
+-- vim.pack.add({'https://github.com/s1n7ax/nvim-terminal'}) -- conflicts with toggleterm required by cmake-tools
+-- vim.pack.add({'https://github.com/nvim-lua/completion-nvim'}) -- outdated and unmaintained
+-- vim.pack.add({'https://github.com/SirVer/ultisnips'}) -- conflicts with LuaSnip
+-- vim.pack.add({'https://github.com/honza/vim-snippets'}) -- useless, required by ultisnips
+-- vim.pack.add({'https://github.com/cdelledonne/vim-cmake'}) -- conflicts with cmake-tools
+-- vim.pack.add({'https://github.com/octol/vim-cpp-enhanced-highlight'}) -- conflicts with treesitter
+
 -- color scheme
 vim.pack.add({'https://github.com/folke/tokyonight.nvim'})
 -- vim.pack.add({'https://github.com/rafi/awesome-vim-colorschemes'})
@@ -48,38 +62,6 @@ vim.pack.add({'https://github.com/kylechui/nvim-surround'})
 
 -- vim commentary
 vim.pack.add({'https://github.com/tpope/vim-commentary'})
-
--- nvim terminal
-vim.pack.add({'https://github.com/s1n7ax/nvim-terminal'})
-
-vim.o.hidden = true
-
-require("nvim-terminal").setup({
-    window = {
-        position = 'botright', -- `:h :botright`
-        split = 'sp', -- `:h split`
-        width = 50,
-        height = 15,
-    },
-    disable_default_keymaps = false,
-    toggle_keymap = '<leader>;',
-    window_height_change_amount = 2,
-    window_width_change_amount = 2,
-    increase_width_keymap = '<leader><leader>+',
-    decrease_width_keymap = '<leader><leader>-',
-    increase_height_keymap = '<leader>+',
-    decrease_height_keymap = '<leader>-',
-    terminals = {
-        {keymap = '<leader>1'},
-        {keymap = '<leader>2'},
-        {keymap = '<leader>3'},
-        {keymap = '<leader>4'},
-        {keymap = '<leader>5'},
-    },
-})
-
--- nvim lsp config
-vim.pack.add({'https://github.com/neovim/nvim-lspconfig'})
 
 -- completion
 vim.pack.add({
@@ -140,12 +122,7 @@ vim.pack.add({'https://github.com/preservim/tagbar'})
 -- dashboard
 vim.pack.add({'https://github.com/glepnir/dashboard-nvim'})
 
-
-vim.pack.add({'https://github.com/dense-analysis/ale'})
-
 -- code highlighting
--- vim.pack.add({'https://github.com/octol/vim-cpp-enhanced-highlight'})
--- vim.pack.add({'https://github.com/cdelledonne/vim-cmake'})
 vim.pack.add({
     'https://github.com/nvim-lua/plenary.nvim',
     'https://github.com/stevearc/overseer.nvim',
@@ -311,18 +288,5 @@ vim.pack.add({'https://github.com/szw/vim-maximizer'})
 -- trailer trash
 vim.pack.add({'https://github.com/csexton/trailertrash.vim'})
 
-
-vim.pack.add({'https://github.com/puremourning/vimspector'})
-
 -- gdb plugin
 vim.pack.add({'https://github.com/sakhnik/nvim-gdb'})
-
--- code completion
--- vim.pack.add({'https://github.com/nvim-lua/completion-nvim'})
-
--- vim.pack.add({'https://github.com/Valloric/YouCompleteMe'})
--- vim.pack.add({'https://github.com/neoclide/coc.nvim'})
--- vim.pack.add({'https://github.com/SirVer/ultisnips'})
--- vim.pack.add({'https://github.com/honza/vim-snippets'})
--- vim.pack.add({'https://github.com/ms-jpq/coq_nvim'})
-
