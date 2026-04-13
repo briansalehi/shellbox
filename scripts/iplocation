@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+function iplocation_usage {
+    echo -e "Usage: iplocation [-x <proxy>] [-v] [-o <i,c,a,p>] [-n] [-d <character>] [address]"
+    echo -e "\n\nOptions:"
+    echo -e "\taddress\t\t\tOptionally give an IP address to resolve other than your own."
+    echo -e "\t-x,--proxy <address>\tUse proxy to resolve an IP address."
+    echo -e "\t-o,--output <name>\tCustomize output by column names separated by comma"
+    echo -e "\t                  \tcolumn names: <i,ip> <c,country> <a,alpha> <p,provider>"
+    echo -e "\t-d,--delimiter <char>\tSeparate output by custome delimiter, default is newline"
+    echo -e "\t-n,--no-header\t\tDo not show headers followed by the output"
+    echo -e "\t-h,--help\t\tShow this help."
+    echo -e "\n\nExamples:"
+    echo -e "\tiplocation"
+    echo -e "\tiplocation 204.79.197.200"
+    echo -e "\tiplocation -x localhost:9050"
+    echo -e "\tiplocation -x localhost:9050 204.79.197.200"
+    echo -e "\tiplocation -d ',' -n -o ip,country"
+    echo -e "\tiplocation --delimiter ',' --no-header --output ip,country"
+    echo -e "\tiplocation --delimiter ',' --no-header --output ip,country 204.79.197.200"
+}
+
+function iplocation_check_requirements {
+    # Check if required tools exist before proceeding
+    if ! command -v curl &>/dev/null
+    then
+        echo "$(tput setaf 1)curl not installed$(tput sgr0)"
+        return 1
+    elif ! command -v jq &>/dev/null
+    then
+        echo "$(tput setaf 1)jq not installed$(tput sgr0)"
+        return 2
+    fi
+}
+
+function iplocation_prepare_autocomplete {
+    complete -W "ip country alpha isp" iplocation -o
+    complete -W "ip country alpha isp" iplocation --output
+}
+
+function iplocation_parse_arguments {
+    # Parse given arguments
+    while [ $# -gt 0 ]
+    do
+        case "$1" in
+            -h|--help) iplocation_usage; return 1 ;;
+            -x|--proxy) PROXY_ADDRESS="$2"; shift ;;
+            -o|--output) OUTPUT="$2"; shift ;;
+            -d|--delimiter) DELIMITER="$2"; shift ;;
+            -n|--no-header) HEADLESS=1 ;;
+            --) ;; # ignore
+            *) ADDRESS="$1" ;;
+        esac
+        shift
+    done
+}
+
+function iplocation_lookup_address {
+    # If no address was given, lookup user's public address
+    if [ -z "$ADDRESS" ]
+    then
+        if ! ADDRESS="$(curl -s "${PROXY_ADDRESS:+-x}" "${PROXY_ADDRESS}" ifconfig.me/ip)"
+        then
+            echo "$(tput setaf 1)failed to lookup address$(tput sgr0)"
+            return 5
+        fi
+    fi
+}
+
+function iplocation_locate_address {
+    if ! JSON_OBJECT="$(curl -s "${PROXY_ADDRESS:+-x}" "$PROXY_ADDRESS" "https://api.iplocation.net/?ip=$ADDRESS")"
+    then
+        echo "$(tput setaf 1)failed to locate address$(tput sgr0)"
+        return 6
+    fi
+
+    if [ "$JSON_OBJECT" = "null" ] || [ "$JSON_OBJECT" = "" ] || ! jq '.' <<< "$JSON_OBJECT" &>/dev/null
+    then
+        echo "$(tput setaf 1)failed to retrieve data from api$(tput sgr0)"
+        return 7
+    fi
+}
+
+function iplocation_print_component {
+    case "$1" in
+        c|country)  [ "${HEADLESS:-0}" -eq 0 ] && echo -n "country: "; echo -n "$(tput setaf 2)$(jq -r '.country_name' <<< "$JSON_OBJECT")$(tput sgr0)";;
+        a|alpha)    [ "${HEADLESS:-0}" -eq 0 ] && echo -n "alpha: ";   echo -n "$(tput setaf 2)$(jq -r '.country_code2' <<< "$JSON_OBJECT")$(tput sgr0)";;
+        p|isp)      [ "${HEADLESS:-0}" -eq 0 ] && echo -n "isp: ";     echo -n "$(tput setaf 2)$(jq -r '.isp' <<< "$JSON_OBJECT")$(tput sgr0)";;
+        i|ip)       [ "${HEADLESS:-0}" -eq 0 ] && echo -n "address: "; echo -n "$(tput setaf 2)$(jq -r '.ip' <<< "$JSON_OBJECT")$(tput sgr0)";;
+        *) return 1 ;;
+    esac
+}
+
+function iplocation_print_results {
+    local -a parameters
+    local index=0
+
+    # Prefer shifting over looping over parameters by
+    # pushing output formats into function arguments,
+    # this is because we will know if we are reading last
+    # parameter so that we can skip printing delimiter.
+    if [ "$OUTPUT" != "" ]
+    then
+        IFS="," read -ra parameters <<< "$OUTPUT"
+    else
+        IFS=" " read -ra parameters <<< "ip country alpha isp"
+    fi
+
+    # Print output parameters in order specified by user
+    # or default order, and print delimiter after each
+    # except the last.
+    while [ "${#parameters[*]}" -gt 0 ]
+    do
+        iplocation_print_component "${parameters[$index]}"
+
+        # Remove used parameter to check for size of array next.
+        unset 'parameters[$index]'
+        ((++index))
+
+        # Print delimiter after each parameter except the last.
+        [ "${#parameters[*]}" -gt 0 ] && echo -en "${DELIMITER:-$'\n'}" || echo
+    done
+}
+
+# Sequencially follow execution of defined functions
+iplocation_check_requirements   || exit
+iplocation_prepare_autocomplete || exit
+iplocation_parse_arguments "$@" || exit
+iplocation_lookup_address       || exit
+iplocation_locate_address       || exit
+iplocation_print_results        || exit

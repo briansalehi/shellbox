@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+prefix_path="${prefix_path:-$HOME/.local}"
+source_path="$prefix_path/src"
+
+machine="$(uname -m)"
+distro="$(awk '{FS="="} $1=="ID" {print $2}' /etc/os-release | tr -d '"')"
+release="$(awk '{FS="="} $1=="VERSION_ID" {print $2}' /etc/os-release | tr -d '"')"
+
+error()   { tput bold; tput setaf 1; echo $@; tput sgr0; exit 1; }
+notice()  { tput bold; tput setaf 3; echo $@; tput sgr0; }
+success() { tput bold; tput setaf 2; echo $@; tput sgr0; }
+code()    { tput dim; tput setaf 8; echo -e "\n\t$@\n"; tput sgr0; }
+
+case "$(uname -m)" in
+    x86_64)
+        [ "$distro" == "ubuntu" ] || error "Incompatible distro: ${distro}"
+        build="x86_64-linux-gnu-${distro}-${release}" ;;
+    aarch64)
+        build="aarch64-linux-gnu" ;;
+    armv7a)
+        build="armv7a-linux-gnueabihf" ;;
+    *)
+        error "Incompatible machine: ${machine}" ;;
+esac
+
+[ -d ${source_path} ] || mkdir -p ${source_path} || error "Cannot create ${source_path}"
+
+cd ${source_path} || error "Cannot move to ${source_path}"
+
+if [ -d ${source_path}/llvm-project ]
+then
+    notice "Updating repository"
+    cd llvm-project || error "${source_path}/llvm-project directory does not exist"
+    git checkout main &>/dev/null
+    git pull | grep '[0-9]\+ files changed, [0-9]\+ insertions(+), [0-9]\+ deletions(-)'
+else
+    notice "Cloning repository"
+    git clone https://github.com/llvm/llvm-project.git || error "Cloning failed"
+    cd llvm-project || error "${source_path}/llvm-project directory does not exist"
+fi
+
+# all available versions
+read -a versions <<< $(git tag | grep "^llvmorg-[0-9]\+.[0-9]\+.[0-9]\+$" | sort -t '-' -k 2 -n -r | cut -d'-' -f2 | xargs)
+
+cd ${source_path}
+
+index=0
+version="${versions[$index]}"
+archive="clang+llvm-${version}-${build}.tar.xz"
+unarchived="${archive%.tar.xz*}"
+
+# download and extract archive, downgrade version repeatedly until compatible binary found
+notice "Downloading archive"
+while ! [ -f "$archive" ]
+do
+    if ! wget -c -q --show-progress https://github.com/llvm/llvm-project/releases/download/llvmorg-${version}/clang+llvm-${version}-${build}.tar.xz
+    then
+        echo -ne "\e[1;31mVersion ${version} does not have a compatible binary for $(uname -m), "
+        index=$((index + 1))
+        version="${versions[$index]}"
+        archive="clang+llvm-${version}-${build}.tar.xz"
+        unarchived="${archive%.tar.xz*}"
+
+        if [ $index -eq ${#versions[*]} ]
+        then
+            echo -e "no compatible binary found.\e[0m"
+        else
+            echo -e "downgrading version to ${version}\e[0m"
+        fi
+    fi
+
+    [ -f "$archive" ] && notice "Archive ${version} already downloaded"
+done
+
+if [ -d "${unarchived}" ]
+then
+    notice "Archive ${version} already extracted"
+else
+    notice "Extracting ${version} archive"
+    tar -xJf "${archive}" || error "Extracting ${source_path}/${unarchived} failed"
+fi
+
+success "Make executables visible by updating your PATH:"
+code "include_path ${source_path/$HOME/\$HOME}/${unarchived}/bin"

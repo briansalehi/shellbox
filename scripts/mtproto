@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+
+mtproto_country="ANY"
+mtproto_cache="/tmp/mtproto.hosts"
+address_list="/tmp/mtproto.list"
+
+function mtproto_usage() {
+    echo "mtproto [-h] [-c <country_name=US>]"
+    echo
+    echo "options"
+    echo
+    echo " -h,--help            print help menu"
+    echo " -c,--country <code>  country code or name"
+    echo " -l,--limit <numbers> number of matches"
+}
+
+function mtproto_choose_country() {
+    local country_name="$1"
+
+    case "${country_name,,}" in
+        gb|britain) mtproto_country=GB ;;
+        us|america) mtproto_country=US ;;
+        de|germany) mtproto_country=DE ;;
+        any) mtproto_country=ANY ;;
+        *) echo "unknown country, falling back to ANY"; mtproto_country=ANY
+    esac
+}
+
+function mtproto_report_query() {
+    local entries="$1"
+    local index="$2"
+    local accepted="$3"
+    local query
+    # global field_length to save previous query lenght for next iteration
+
+    query="$accepted proxies ($index/$entries entries)"
+    printf "%0.s\b" $(seq 1 "${field_length:-0}") >&2
+    field_length="${#query}"
+    echo -ne "$query" >&2
+}
+
+function mtproto_check_host_availability() {
+    local object="$1"
+    local country="$2"
+    local host
+    local port
+    local secret
+    local ping_entry
+
+    host="$(jq -r '.host' <<< "$object")"
+    port="$(jq -r '.port' <<< "$object")"
+    secret="$(jq -r '.secret' <<< "$object")"
+
+    if ping_entry="$(ping -n -c1 -W1 "$host" 2>/dev/null)"
+    then
+        echo "$ping_entry" | awk -v c="$country" \
+         -v h="$host" \
+         -v p="$port" \
+         -v s="$secret" \
+         'BEGIN{FS="/"} $1 == "rtt min" {printf "%d %s tg://proxy?server=%s&port=%d&secret=%s\n", $5,c,h,p,s}'
+        return 0
+    else
+        return 1
+    fi
+}
+
+function mtproto_retrieve_latest_proxy_list() {
+    if ! curl -s 'https://mtpro.xyz/api/?type=mtproto' > "$address_list"
+    then
+        echo "failed to load uri" >&2
+        return
+    fi
+}
+
+function mtproto_print_results() {
+    local match_limit="$1"
+    local index
+    local latency
+    local link
+    local choice
+    local existing_entries
+    local -A results
+
+    # Sometimes, available proxy entries may not reach user supplied limit.
+    # Therefore, make sure limit does not get passed behind existing entries
+    existing_entries="$(wc -l "$mtproto_cache" | cut -d ' ' -f 1)"
+    [ "$match_limit" -gt "$existing_entries" ] && match_limit="$existing_entries"
+
+    for index in $(seq 1 "$match_limit")
+    do
+        latency="$(sed -n "${index}p" "$mtproto_cache" | awk '{print $2}')"
+        country="$(sed -n "${index}p" "$mtproto_cache" | awk '{print $3}')"
+        link="$(sed -n "${index}p" "$mtproto_cache" | awk '{print $4}')"
+        address="$(sed -n 's/.*server=\(.*\)\&port=\([0-9]\+\)\&.*/\1:\2/p' <<< "$link")"
+
+        results["[$country]: $address (${latency}ms)"]="$link"
+    done
+
+    select choice in "${!results[@]}"
+    do
+        echo -e "Prompting telegram for \e[1;31m${choice}\e[0m" >&2
+        xdg-open "${results[$choice]}" 2>/dev/null
+    done
+}
+
+function mtproto() {
+    local match_limit=1
+    local max_count="$match_limit"
+    local index
+    local country
+    local object
+    local entries
+    local accepted=0
+
+    [ -s "$mtproto_cache" ] && rm "$mtproto_cache"
+
+    while [ $# -gt 0 ]
+    do
+        case "$1" in
+            -h|--help) mtproto_usage; return ;;
+            -c|--country) mtproto_choose_country "$2"; shift ;;
+            -l|--limit) match_limit="$2"; shift ;;
+            *) mtproto_usage; return ;;
+        esac
+        shift
+    done
+
+    case "$match_limit" in
+        [0-9]*) max_count="$match_limit" ;;
+        *) match_limit=1; max_count="1" ;;
+    esac
+
+    mtproto_retrieve_latest_proxy_list
+
+    entries="$(jq '. | length' "$address_list")"
+
+    echo -n "Loading  " >&2
+
+    for index in $(seq 0 "${entries:-1}")
+    do
+        object="$(jq -r ".[$index]" "$address_list")"
+        country="$(jq -r '.country' <<< "$object")"
+
+        mtproto_report_query "$entries" "$index" "$accepted"
+
+        if [ "$mtproto_country" == "ANY" ] || [ "$country" == "$mtproto_country" ]
+        then
+            if mtproto_check_host_availability "$object" "$country"
+            then
+                ((++accepted))
+                ((--max_count))
+
+                mtproto_report_query "$entries" "$index" "$accepted"
+            fi
+        fi
+
+        [ "$max_count" -eq 0 ] && break
+
+        ((++index))
+    done | nl | sort -k 2 -n 1> "$mtproto_cache"
+    printf "\n\n"
+
+    mtproto_print_results "$match_limit"
+}
+
+mtproto $@

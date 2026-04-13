@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+function genesis_pdf_batch()
+{
+    local filepath
+    local filename
+    local title
+    local link
+
+    for filepath in "$1"/*.epub
+    do
+        filename="$(basename "$filepath")"
+        filename="${filename%.*}"
+        title="$(basename "$filepath" | sed -n 's/ - .*//p')"
+
+        for link in $(genesis-pdf-downloader "${title:-$filename}")
+        do
+            if wget -c "$link" -O "${filepath%.*}.pdf"
+            then
+                rm "$filepath"
+                break
+            fi
+        done
+    done
+}
+
+genesis_pdf_batch "$1"

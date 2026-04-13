@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+function genesis()
+{
+    local keyword="$1"
+    local encoded
+    local character
+    local occurence
+    local uri
+    local filters
+    local index
+
+    [ -z "${keyword}" ] && echo "usage: ${0##*/} <query string>" && exit 1
+
+    for index in $(seq 0 $((${#keyword} - 1)) )
+    do
+        character=${keyword:$index:1}
+
+        case "${character}" in
+            [-_.~a-zA-Z0-9]) occurence="${character}" ;;
+            *) occurence=$(printf '%%%02x' "'${character}") ;;
+        esac
+
+        encoded="${encoded}${occurence}"
+    done
+
+    filters="res=100&phrase=1&view=detailed&column=def&sort=year&sortmode=DESC"
+    uri="http://libgen.is/search.php?req=${encoded}&${filters}"
+
+    # automatically open link by user's default browser
+    xdg-open "${uri}"
+}
+
+genesis "$*"

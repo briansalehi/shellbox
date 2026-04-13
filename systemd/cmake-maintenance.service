@@ -1,0 +1,11 @@
+[Unit]
+Description=CMake Version Maintenance Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cmake-maintenance
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+function clip() {
+    # Copy content to clipboard as is, without a trailing newline.
+    # When an argument is given, it will be read as file and its content will be copied to clipboard.
+    # When no arguments given, read from standard input.
+    if ! command -v xclip &>/dev/null
+    then
+        tput setaf 1
+        tput bold
+        echo "xclip is not installed" >&2
+        tput sgr0
+        exit 1
+    elif [ $# -eq 0 ]
+    then
+        # read from standard input
+        local content=$(< /dev/stdin)
+
+        if [ $(wc -l <<< "$content") -gt 1 ]
+        then
+            # multi-line input will be untouched
+            xclip -select clipboard <<< "$content"
+        else
+            # single line input will be trimmed from newline
+            tr -d '\n' <<< "$content" | xclip -select clipboard
+        fi
+    elif [ -f "$1" ]
+    then
+        # read from given file
+        xclip -select clipboard < "$1"
+    else
+        echo -n "$1" | xclip -select clipboard
+    fi
+}
+
+clip "$@"

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+# Copy and paste this function into your script
+
+generic_select() {
+    local title="$1"; shift
+    local index=0
+    local option_index
+    local -a options
+    local is_multi_line
+    local screen_width=0
+
+    if command -v tput &>/dev/null
+    then
+        screen_width=$(tput cols)
+    fi
+
+    while [[ $# -gt 0 ]]
+    do
+        options+=("$1")
+
+        [[ -z "$is_multi_line" ]] && [[ $screen_width -gt 0 ]] && [[ ${#1} -gt $((screen_width - 5)) ]] && needs_line_separator=true
+
+        shift
+    done
+
+    while [[ $index -lt ${#options[*]} ]]
+    do
+        echo -e "$((index + 1))) ${options[$index]}${needs_line_separator:+\n}" >&2
+        index=$((index + 1))
+    done
+
+    while ! is_numeric "$option_index" || ! is_in_range "$option_index" 1 "${#options[*]}"
+    do
+        echo -ne "${title}>> " >&2
+        read -r option_index
+    done
+
+    echo -e "${options[$((option_index - 1))]}"
+}
