@@ -22,14 +22,12 @@ help:
 all: $(scripts) $(aliases) $(services) script_notice alias_notice
 
 $(scripts): script_notice
-	mkdir --parents $(HOME)/.local/bin
-	cp scripts/$@ $(HOME)/.local/bin
+	mkdir --parents /usr/local/bin
+	cp scripts/$@ /usr/local/bin
 
 services: $(services)
 
 $(services): service_notice
-	mkdir --parents $(HOME)/.local/bin
-	cp services/$@ $(HOME)/.local/bin
 	sudo cp services/$@ /usr/local/bin
 	sudo cp systemd/$@.timer /usr/lib/systemd/system/
 	sudo cp systemd/$@.service /usr/lib/systemd/system/
@@ -41,20 +39,20 @@ $(aliases): alias_notice
 script_notice:
 	@tput setaf 3
 	@tput bold
-	@echo 'Use `include_path` utility to add `$$HOME/.local/bin` to your PATH:'
+	@echo 'Add `/usr/local/bin` to your PATH:'
 	@echo
 	@tput setaf 6
-	@echo 'include_path $$HOME/.local/bin'
+	@echo 'include_path /usr/local/bin'
 	@tput sgr0
 	@echo
 
 alias_notice:
 	@tput setaf 3
 	@tput bold
-	@echo 'Add following line in your `$$HOME/.bashrc` file:'
+	@echo 'Add the following line in your `~/.bashrc` file:'
 	@echo
 	@tput setaf 6
-	@echo 'for tool in $$HOME/.bash_tools/*; do source $$tool; done'
+	@echo 'for tool in ~/.bash_tools/*; do source $$tool; done'
 	@tput sgr0
 	@echo
 
