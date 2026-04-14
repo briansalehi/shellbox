@@ -116,6 +116,7 @@ include_path "$ANDROID_HOME/cmdline-tools/latest"
 include_path "$ANDROID_HOME/platform-tools"
 include_path "/opt/clion/latest"
 include_path "/opt/qt/6.10.0/gcc_64"
+include_path "/usr/local/src/Qt/6.10.2/gcc_64"
 include_path "$HOME/.cargo"
 include_path "$HOME/.local"
 

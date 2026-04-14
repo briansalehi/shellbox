@@ -13,11 +13,74 @@
 -- vim.pack.add({'https://github.com/octol/vim-cpp-enhanced-highlight'}) -- conflicts with treesitter
 
 -- color scheme
-vim.pack.add({'https://github.com/folke/tokyonight.nvim'})
--- vim.pack.add({'https://github.com/rafi/awesome-vim-colorschemes'})
--- vim.pack.add({'https://github.com/joshdick/onedark.vim'})
+vim.pack.add({
+    'https://github.com/loctvl842/monokai-pro.nvim',
+    'https://github.com/folke/tokyonight.nvim',
+    'https://github.com/tiagovla/tokyodark.nvim',
+    'https://github.com/ellisonleao/gruvbox.nvim',
+    'https://github.com/scottmckendry/cyberdream.nvim',
+    'https://github.com/Shatur/neovim-ayu',
+    'https://github.com/rafi/awesome-vim-colorschemes',
+    'https://github.com/joshdick/onedark.vim'
+})
 
-vim.cmd('colorscheme tokyonight')
+require("monokai-pro").setup({
+  transparent_background = false,
+  terminal_colors = true,
+  devicons = true,
+  styles = {
+    comment = { italic = true },
+    keyword = { italic = true },
+    type = { italic = true },
+    storageclass = { italic = true },
+    structure = { italic = true },
+    parameter = { italic = true },
+    annotation = { italic = true },
+    tag_attribute = { italic = true },
+  },
+  filter = "pro", -- classic | octagon | pro | machine | ristretto | spectrum
+  day_night = {
+    enable = false,
+    day_filter = "pro",
+    night_filter = "spectrum",
+  },
+  inc_search = "background", -- underline | background
+  background_clear = {
+    "toggleterm",
+    "telescope",
+    "renamer",
+    "notify",
+  },
+  plugins = {
+    bufferline = {
+      underline_selected = false,
+      underline_visible = false,
+      underline_fill = false,
+      bold = true,
+    },
+    indent_blankline = {
+      context_highlight = "default", -- default | pro
+      context_start_underline = false,
+    },
+  },
+  override = function(scheme)
+    return {}
+  end,
+  override_palette = function(filter)
+    return {}
+  end,
+  override_scheme = function(scheme, palette, colors)
+    return {}
+  end,
+})
+
+require('ayu').setup({
+    mirage = false, -- Set to `true` to use `mirage` variant instead of `dark` for dark background.
+    terminal = true, -- Set to `false` to let terminal manage its own colors.
+    overrides = {}, -- A dictionary of group names, each associated with a dictionary of parameters (`bg`, `fg`, `sp` and `style`) and colors in hex.
+})
+
+vim.cmd('colorscheme ayu')
 
 -- telescope
 vim.pack.add({
@@ -49,9 +112,13 @@ vim.keymap.set('n', '<leader>fh', telescope_builtin.help_tags)
 
 -- tree sitter
 vim.pack.add({'https://github.com/nvim-treesitter/nvim-treesitter'})
-require('nvim-treesitter').setup({
-    ensure_installed = {'cpp', 'lua', 'cmake'},
-    highlight = { enable = true }
+require('nvim-treesitter').install({"c", "cpp", "lua", "cmake"})
+
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = { 'c', 'cpp', 'lua', 'cmake' },
+    callback = function()
+        pcall(vim.treesitter.start)
+    end,
 })
 
 -- vim last place
@@ -109,12 +176,58 @@ cmp.setup({
 -- git blame
 vim.pack.add({'https://github.com/zivyangll/git-blame.vim'})
 
--- vim airline
+-- gitsigns
+vim.pack.add({'https://github.com/lewis6991/gitsigns.nvim'})
+require('gitsigns').setup({
+    signs = {
+        add          = { text = '▎' },
+        change       = { text = '▎' },
+        delete       = { text = '▁' },
+        topdelete    = { text = '▔' },
+        changedelete = { text = '▎' },
+        untracked    = { text = '▎' },
+    },
+    on_attach = function(bufnr)
+        local gs = package.loaded.gitsigns
+        local map = function(mode, l, r, desc)
+            vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
+        end
+        map('n', ']h', gs.next_hunk,        'Next hunk')
+        map('n', '[h', gs.prev_hunk,        'Prev hunk')
+        map('n', '<leader>hs', gs.stage_hunk,   'Stage hunk')
+        map('n', '<leader>hu', gs.undo_stage_hunk, 'Undo stage hunk')
+        map('n', '<leader>hr', gs.reset_hunk,   'Reset hunk')
+        map('n', '<leader>hp', gs.preview_hunk, 'Preview hunk')
+        map('n', '<leader>hb', gs.blame_line,   'Blame line')
+    end,
+})
+
+-- lualine
+vim.pack.add({'https://github.com/nvim-lualine/lualine.nvim'})
+require('lualine').setup({
+    options = {
+        theme = 'monokai-pro',
+        component_separators = { left = '|', right = '|' },
+        section_separators   = { left = '', right = '' },
+    },
+    sections = {
+        lualine_a = { 'mode' },
+        lualine_b = { 'branch', 'diff', 'diagnostics' },
+        lualine_c = { { 'filename', path = 1 } },
+        lualine_x = { 'encoding', 'fileformat', 'filetype' },
+        lualine_y = { 'progress' },
+        lualine_z = { 'location' },
+    },
+})
+
+-- vim airline (replaced by lualine)
 -- vim.pack.add({'https://github.com/vim-airline/vim-airline.git'})
 
 -- nerd tree
 vim.pack.add({'https://github.com/scrooloose/nerdtree'})
 -- vim.pack.add({'https://github.com/preservim/nerdtree'})
+vim.keymap.set('n', '<leader>e', ':NERDTreeToggle<CR>', { silent = true, desc = 'Toggle NERDTree' })
+vim.keymap.set('n', '<leader>ef', ':NERDTreeFind<CR>',  { silent = true, desc = 'Reveal file in NERDTree' })
 
 -- tag bar
 vim.pack.add({'https://github.com/preservim/tagbar'})
@@ -145,9 +258,9 @@ require("cmake-tools").setup {
   --       ${variant:xx}
   cmake_build_directory = function()
     if osys.iswin32 then
-      return "build-${variant:buildType}"
+      return "build"
     end
-    return "build-${variant:buildType}"
+    return "build"
   end, -- this is used to specify generate directory for cmake, allows macro expansion, can be a string or a function returning the string, relative to cwd.
   cmake_compile_commands_options = {
     action = "none", -- available options: soft_link, copy, lsp, none
@@ -285,8 +398,132 @@ vim.pack.add({'https://github.com/shime/vim-livedown'})
 
 vim.pack.add({'https://github.com/szw/vim-maximizer'})
 
--- trailer trash
-vim.pack.add({'https://github.com/csexton/trailertrash.vim'})
+-- trailing whitespace: highlight and trim on save
+vim.api.nvim_set_hl(0, 'TrailingWhitespace', { bg = '#ff0000' })
+vim.fn.matchadd('TrailingWhitespace', [[\s\+$]])
+vim.api.nvim_create_autocmd('BufWritePre', {
+    pattern = '*',
+    callback = function()
+        local pos = vim.api.nvim_win_get_cursor(0)
+        vim.cmd([[%s/\s\+$//e]])
+        vim.api.nvim_win_set_cursor(0, pos)
+    end,
+})
+
+-- clangd extensions
+vim.pack.add({'https://github.com/p00f/clangd_extensions.nvim'})
+require("clangd_extensions").setup({
+    inlay_hints = {
+        inline = true,
+        only_current_line = false,
+        only_current_line_autocmd = { "CursorHold" },
+        show_parameter_hints = true,
+        parameter_hints_prefix = "<- ",
+        other_hints_prefix = "=> ",
+    },
+    ast = {
+        role_icons = {
+            type = "",
+            declaration = "",
+            expression = "",
+            specifier = "",
+            statement = "",
+            ["template argument"] = "",
+        },
+        kind_icons = {
+            Compound = "",
+            Recovery = "",
+            TranslationUnit = "",
+            PackExpansion = "",
+            TemplateTypeParm = "",
+            TemplateTemplateParm = "",
+            TemplateParamObject = "",
+        },
+    },
+    memory_usage = { border = "rounded" },
+    symbol_info  = { border = "rounded" },
+})
+
+vim.api.nvim_create_autocmd("LspAttach", {
+    callback = function(args)
+        local client = vim.lsp.get_client_by_id(args.data.client_id)
+        if client and client.name == "clangd" then
+            local buf = args.buf
+            local map = vim.keymap.set
+            map("n", "<leader>lh", "<cmd>ClangdToggleInlayHints<CR>",   { buffer = buf, desc = "Toggle inlay hints" })
+            map("n", "<leader>ls", "<cmd>ClangdSwitchSourceHeader<CR>", { buffer = buf, desc = "Switch source/header" })
+            map("n", "<leader>la", "<cmd>ClangdAST<CR>",                { buffer = buf, desc = "Show AST" })
+            map("n", "<leader>lm", "<cmd>ClangdMemoryUsage<CR>",        { buffer = buf, desc = "Memory usage" })
+            map("n", "<leader>lt", "<cmd>ClangdTypeHierarchy<CR>",      { buffer = buf, desc = "Type hierarchy" })
+            map("n", "<leader>li", "<cmd>ClangdSymbolInfo<CR>",         { buffer = buf, desc = "Symbol info" })
+        end
+    end,
+})
 
 -- gdb plugin
 vim.pack.add({'https://github.com/sakhnik/nvim-gdb'})
+
+-- claude code
+vim.pack.add({'https://github.com/greggh/claude-code.nvim'})
+require("claude-code").setup({
+  -- Terminal window settings
+  window = {
+    split_ratio = 0.3,      -- Percentage of screen for the terminal window (height for horizontal, width for vertical splits)
+    position = "botright",  -- Position of the window: "botright", "topleft", "vertical", "float", etc.
+    enter_insert = true,    -- Whether to enter insert mode when opening Claude Code
+    hide_numbers = true,    -- Hide line numbers in the terminal window
+    hide_signcolumn = true, -- Hide the sign column in the terminal window
+
+    -- Floating window configuration (only applies when position = "float")
+    float = {
+      width = "80%",        -- Width: number of columns or percentage string
+      height = "80%",       -- Height: number of rows or percentage string
+      row = "center",       -- Row position: number, "center", or percentage string
+      col = "center",       -- Column position: number, "center", or percentage string
+      relative = "editor",  -- Relative to: "editor" or "cursor"
+      border = "rounded",   -- Border style: "none", "single", "double", "rounded", "solid", "shadow"
+    },
+  },
+  -- File refresh settings
+  refresh = {
+    enable = true,           -- Enable file change detection
+    updatetime = 100,        -- updatetime when Claude Code is active (milliseconds)
+    timer_interval = 1000,   -- How often to check for file changes (milliseconds)
+    show_notifications = true, -- Show notification when files are reloaded
+  },
+  -- Git project settings
+  git = {
+    use_git_root = true,     -- Set CWD to git root when opening Claude Code (if in git project)
+  },
+  -- Shell-specific settings
+  shell = {
+    separator = '&&',        -- Command separator used in shell commands
+    pushd_cmd = 'pushd',     -- Command to push directory onto stack (e.g., 'pushd' for bash/zsh, 'enter' for nushell)
+    popd_cmd = 'popd',       -- Command to pop directory from stack (e.g., 'popd' for bash/zsh, 'exit' for nushell)
+  },
+  -- Command settings
+  command = "claude", -- Command used to launch Claude Code
+  -- Command variants
+  command_variants = {
+    -- Conversation management
+    continue = "--continue", -- Resume the most recent conversation
+    resume = "--resume",     -- Display an interactive conversation picker
+
+    -- Output options
+    verbose = "--verbose",   -- Enable verbose logging with full turn-by-turn output
+  },
+  -- Keymaps
+  keymaps = {
+    toggle = {
+      normal = "<C-,>",       -- Normal mode keymap for toggling Claude Code, false to disable
+      terminal = "<C-,>",     -- Terminal mode keymap for toggling Claude Code, false to disable
+      variants = {
+        continue = "<leader>cC", -- Normal mode keymap for Claude Code with continue flag
+        verbose = "<leader>cV",  -- Normal mode keymap for Claude Code with verbose flag
+      },
+    },
+    window_navigation = true, -- Enable window navigation keymaps (<C-h/j/k/l>)
+    scrolling = true,         -- Enable scrolling keymaps (<C-f/b>) for page up/down
+  }
+})
+vim.keymap.set('n', '<leader>cc', '<cmd>ClaudeCode<CR>', { desc = 'Toggle Claude Code' })

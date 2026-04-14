@@ -1,9 +1,15 @@
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
-vim.lsp.enable("clangd")
-
--- pass cmp capabilities to all servers
+-- pass cmp capabilities to all servers before enabling any
 vim.lsp.config('*', { capabilities = capabilities })
+
+vim.lsp.config('clangd', {
+    cmd = { 'clangd', '--background-index', '--clang-tidy', '--header-insertion=iwyu' },
+    filetypes = { 'c', 'cpp', 'objc', 'objcpp' },
+    root_markers = { 'compile_commands.json', '.clangd', 'CMakeLists.txt', '.git' },
+})
+
+vim.lsp.enable("clangd")
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
@@ -19,6 +25,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("n", "K", vim.lsp.buf.hover, { buffer = buf })
     map("n", "<leader>rn", vim.lsp.buf.rename, { buffer = buf })
     map("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf })
+    map("n", "gl", vim.diagnostic.open_float, { buffer = buf })
+    map("n", "]d", vim.diagnostic.goto_next, { buffer = buf })
+    map("n", "[d", vim.diagnostic.goto_prev, { buffer = buf })
 
     -- signature help
     if client:supports_method("textDocument/signatureHelp") then
