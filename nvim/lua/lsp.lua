@@ -25,6 +25,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("n", "K", vim.lsp.buf.hover, { buffer = buf })
     map("n", "<leader>rn", vim.lsp.buf.rename, { buffer = buf })
     map("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf })
+    map("n", "<leader>lf", function() vim.lsp.buf.format({ async = true }) end, { buffer = buf, desc = "Format buffer" })
+    map("v", "<leader>lf", function() vim.lsp.buf.format({ async = true }) end, { buffer = buf, desc = "Format selection" })
     map("n", "gl", vim.diagnostic.open_float, { buffer = buf })
     map("n", "]d", vim.diagnostic.goto_next, { buffer = buf })
     map("n", "[d", vim.diagnostic.goto_prev, { buffer = buf })

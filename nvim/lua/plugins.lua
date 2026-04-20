@@ -389,6 +389,27 @@ require("cmake-tools").setup {
   cmake_use_scratch_buffer = false, -- A buffer that shows what cmake-tools has done
 }
 
+-- conform.nvim - uncrustify formatter
+vim.pack.add({'https://github.com/stevearc/conform.nvim'})
+require('conform').setup({
+    formatters_by_ft = {
+        c   = { 'uncrustify' },
+        cpp = { 'uncrustify' },
+    },
+    formatters = {
+        uncrustify = {
+            prepend_args = { '-c', '.uncrustify.cfg' },
+        },
+    },
+})
+vim.keymap.set('n', '<leader>uf', function() require('conform').format({ async = true }) end, { desc = 'Uncrustify format buffer' })
+vim.keymap.set('v', '<leader>uf', function() require('conform').format({ async = true }) end, { desc = 'Uncrustify format selection' })
+
+-- oil.nvim - filesystem manager
+vim.pack.add({'https://github.com/stevearc/oil.nvim'})
+require('oil').setup()
+vim.keymap.set('n', '-', '<cmd>Oil<CR>', { desc = 'Open parent directory in oil' })
+
 -- git plugin
 vim.pack.add({'https://github.com/tpope/vim-fugitive'})
 
