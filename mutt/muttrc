@@ -1,8 +1,8 @@
-source ~/.mutt/common.rc
-source ~/.mutt/colors.rc
-source ~/.mutt/proton.rc
-#source ~/.mutt/google.rc
+source ~/.config/mutt/common.rc
+source ~/.config/mutt/colors.rc
+source ~/.config/mutt/proton.rc
+#source ~/.config/mutt/google.rc
 
 # account switching
-macro index \ep ":source ~/.mutt/proton.rc<enter>c!<enter>" "Switch to Proton"
-macro index \eg ":source ~/.mutt/google.rc<enter>c!<enter>" "Switch to Google"
+macro index \ep ":source ~/.config/mutt/proton.rc<enter>c!<enter>" "Switch to Proton"
+macro index \eg ":source ~/.config/mutt/google.rc<enter>c!<enter>" "Switch to Google"

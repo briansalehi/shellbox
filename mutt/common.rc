@@ -1,7 +1,7 @@
 set use_from = yes
-set header_cache = "~/.mutt/cache/headers"
-set message_cachedir = "~/.mutt/cache/bodies"
-set certificate_file = "~/.mutt/certificates"
+set header_cache = "~/.config/mutt/cache/headers"
+set message_cachedir = "~/.config/mutt/cache/bodies"
+set certificate_file = "~/.config/mutt/certificates"
 set imap_keepalive = 900
 set timeout = 60
 set editor = "/usr/bin/nvim"
@@ -29,14 +29,14 @@ bind index,pager \cu sidebar-next
 bind index,pager \co sidebar-open
 
 # cache
-set header_cache =~/.mutt/cache/headers
-set message_cachedir =~/.mutt/cache/bodies
-set certificate_file =~/.mutt/certificates
+set header_cache =~/.config/mutt/cache/headers
+set message_cachedir =~/.config/mutt/cache/bodies
+set certificate_file =~/.config/mutt/certificates
 
 # w3m
 auto_view text/html
 alternative_order text/plain text/enriched text/html
-set mailcap_path = ~/.mutt/mailcap
+set mailcap_path = ~/.config/mutt/mailcap
 
 # urlscan
 macro index,pager \cb "<pipe-message> urlscan<Enter>" "call urlscan to extract URLs out of a message"

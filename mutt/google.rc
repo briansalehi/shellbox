@@ -14,4 +14,4 @@ set ssl_verify_host = yes
 set ssl_verify_dates = yes
 set smtp_url = 'smtps://smtp.google.com:587'
 
-source 'gpg --decrypt ~/.mutt/google.asc |'
+source 'gpg --decrypt ~/.config/mutt/google.asc |'

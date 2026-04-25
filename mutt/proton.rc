@@ -14,6 +14,6 @@ set ssl_starttls = yes
 set ssl_verify_host = yes
 set ssl_verify_dates = yes
 
-source 'gpg --decrypt ~/.mutt/proton.asc |'
+source 'gpg --decrypt ~/.config/mutt/proton.asc |'
 
 mailboxes +Inbox +Sent +Drafts +Trash +Archive +Technical +Financial
