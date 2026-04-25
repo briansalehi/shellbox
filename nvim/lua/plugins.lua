@@ -96,6 +96,7 @@ require('telescope').setup({
   },
   pickers = {
       find_files = {
+          hidden = true,
       }
   },
   extensions = {
@@ -235,7 +236,7 @@ vim.pack.add({'https://github.com/preservim/tagbar'})
 -- dashboard
 vim.pack.add({'https://github.com/glepnir/dashboard-nvim'})
 
--- code highlighting
+-- cmake tools
 vim.pack.add({
     'https://github.com/nvim-lua/plenary.nvim',
     'https://github.com/stevearc/overseer.nvim',
@@ -263,7 +264,7 @@ require("cmake-tools").setup {
     return "build"
   end, -- this is used to specify generate directory for cmake, allows macro expansion, can be a string or a function returning the string, relative to cwd.
   cmake_compile_commands_options = {
-    action = "none", -- available options: soft_link, copy, lsp, none
+    action = "soft_link", -- available options: soft_link, copy, lsp, none
     target = vim.loop.cwd, -- path or function returning path to directory, this is used only if action == "soft_link" or action == "copy"
   },
   cmake_kits_path = nil, -- this is used to specify global cmake kits path, see CMakeKits for detailed usage
@@ -388,6 +389,30 @@ require("cmake-tools").setup {
   cmake_virtual_text_support = true, -- Show the target related to current file using virtual text (at right corner)
   cmake_use_scratch_buffer = false, -- A buffer that shows what cmake-tools has done
 }
+
+do
+    local map = function(lhs, cmd, desc)
+        vim.keymap.set('n', lhs, '<cmd>' .. cmd .. '<CR>', { desc = desc })
+    end
+    map('<leader>mg', 'CMakeGenerate',           'CMake: configure')
+    map('<leader>mb', 'CMakeBuild',              'CMake: build')
+    map('<leader>mf', 'CMakeBuildCurrentFile',   'CMake: build')
+    map('<leader>mr', 'CMakeRun',                'CMake: run')
+    map('<leader>md', 'CMakeDebug',              'CMake: debug')
+    map('<leader>mc', 'CMakeClean',              'CMake: clean')
+    map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
+    map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
+    map('<leader>mt', 'CMakeTest',               'CMake: test')
+    map('<leader>mi', 'CMakeInstall',            'CMake: install')
+    map('<leader>mT', 'CMakeSelectBuildType',    'CMake: select build type')
+    map('<leader>mB', 'CMakeSelectBuildTarget',  'CMake: select build target')
+    map('<leader>mL', 'CMakeSelectLaunchTarget', 'CMake: select launch target')
+    map('<leader>mK', 'CMakeSelectKit',          'CMake: select kit')
+    map('<leader>mo', 'CMakeOpenRunner',         'CMake: open panel')
+    map('<leader>mO', 'CMakeOpenExecutor',       'CMake: open panel')
+    map('<leader>mx', 'CMakeCloseRunner',        'CMake: close panel')
+    map('<leader>mX', 'CMakeCloseExecutor',      'CMake: close panel')
+end
 
 -- conform.nvim - uncrustify formatter
 vim.pack.add({'https://github.com/stevearc/conform.nvim'})
@@ -536,15 +561,15 @@ require("claude-code").setup({
   -- Keymaps
   keymaps = {
     toggle = {
-      normal = "<C-,>",       -- Normal mode keymap for toggling Claude Code, false to disable
-      terminal = "<C-,>",     -- Terminal mode keymap for toggling Claude Code, false to disable
+      normal = "<leader>cc",       -- Normal mode keymap for toggling Claude Code, false to disable
+      terminal = "<leader>cc",     -- Terminal mode keymap for toggling Claude Code, false to disable
       variants = {
         continue = "<leader>cC", -- Normal mode keymap for Claude Code with continue flag
         verbose = "<leader>cV",  -- Normal mode keymap for Claude Code with verbose flag
       },
     },
     window_navigation = true, -- Enable window navigation keymaps (<C-h/j/k/l>)
-    scrolling = true,         -- Enable scrolling keymaps (<C-f/b>) for page up/down
+    scrolling = false,         -- Enable scrolling keymaps (<C-f/b>) for page up/down
   }
 })
 vim.keymap.set('n', '<leader>cc', '<cmd>ClaudeCode<CR>', { desc = 'Toggle Claude Code' })
