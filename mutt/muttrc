@@ -1,7 +1,7 @@
 source ~/.config/mutt/common.rc
 source ~/.config/mutt/colors.rc
+source ~/.config/mutt/google.rc
 source ~/.config/mutt/proton.rc
-#source ~/.config/mutt/google.rc
 
 # account switching
 macro index \ep ":source ~/.config/mutt/proton.rc<enter>c!<enter>" "Switch to Proton"
