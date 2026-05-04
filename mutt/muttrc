@@ -1,6 +1,5 @@
 source ~/.config/mutt/common.rc
 source ~/.config/mutt/colors.rc
-source ~/.config/mutt/google.rc
 source ~/.config/mutt/proton.rc
 
 # account switching

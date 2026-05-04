@@ -1,34 +1,40 @@
 set use_from = yes
-set header_cache = "~/.config/mutt/cache/headers"
-set message_cachedir = "~/.config/mutt/cache/bodies"
-set certificate_file = "~/.config/mutt/certificates"
-set imap_keepalive = 900
-set timeout = 60
-set editor = "/usr/bin/nvim"
+set editor = "nvim"
 set edit_headers = yes
 set charset = UTF-8
 set metoo = yes
+set copy = no
 set sort = threads
 set sort_aux = reverse-last-date-received
-set pager_stop
-set sidebar_visible
-set sidebar_format = "%B%<F? [%F]>%* %<N?%N/>%S"
-set mail_check_stats
+set move = no
+set pager_stop = yes
+set smart_wrap = yes
 
-#set copy = no
-#set move = no
-#set resolve
-#unset use_domain
+unset use_domain
+unset resolve
+
+# imap
+set timeout = 60
+set mail_check = 60
+set imap_keepalive = 300
+set imap_idle = yes
+set imap_check_subscribed = yes
+set check_mbox_size = yes
 
 # key bindings
 bind index G imap-fetch-mail
 bind index \cj next-unread
 bind index \ck previous-unread
+
+# sidebar
 bind index,pager \ci sidebar-prev
 bind index,pager \cu sidebar-next
 bind index,pager \co sidebar-open
+set sidebar_visible
+set sidebar_format = "%B%<F? [%F]>%* %<N?%N/>%S"
 
 # cache
+set header_cache_backend = lmdb
 set header_cache =~/.config/mutt/cache/headers
 set message_cachedir =~/.config/mutt/cache/bodies
 set certificate_file =~/.config/mutt/certificates
@@ -41,3 +47,6 @@ set mailcap_path = ~/.config/mutt/mailcap
 # urlscan
 macro index,pager \cb "<pipe-message> urlscan<Enter>" "call urlscan to extract URLs out of a message"
 macro attach,compose \cb "<pipe-entry> urlscan<Enter>" "call urlscan to extract URLs out of a message"
+
+# notifications
+set new_mail_command = "notify-send --icon=mail-unread '%f' '%n new messages' &"
