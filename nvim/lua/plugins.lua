@@ -400,6 +400,7 @@ do
     map('<leader>mr', 'CMakeRun',                'CMake: run')
     map('<leader>md', 'CMakeDebug',              'CMake: debug')
     map('<leader>mc', 'CMakeClean',              'CMake: clean')
+    map('<leader>mC', 'CMakeSettings',           'CMake: clean')
     map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
     map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
     map('<leader>mt', 'CMakeTest',               'CMake: test')
