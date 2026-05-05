@@ -49,4 +49,4 @@ macro index,pager \cb "<pipe-message> urlscan<Enter>" "call urlscan to extract U
 macro attach,compose \cb "<pipe-entry> urlscan<Enter>" "call urlscan to extract URLs out of a message"
 
 # notifications
-set new_mail_command = "notify-send --icon=mail-unread '%f' '%n new messages' &"
+set new_mail_command = "notify-send --icon=mail-unread 'Neomutt' '%n unread emails in %f' &"
