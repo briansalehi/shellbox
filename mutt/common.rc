@@ -21,17 +21,17 @@ set imap_idle = yes
 set imap_check_subscribed = yes
 set check_mbox_size = yes
 
+# sidebar
+set sidebar_visible
+set sidebar_format = "%B%<F? [%F]>%* %<N?%N/>%S"
+
 # key bindings
 bind index G imap-fetch-mail
 bind index \cj next-unread
 bind index \ck previous-unread
-
-# sidebar
 bind index,pager \ci sidebar-prev
 bind index,pager \cu sidebar-next
 bind index,pager \co sidebar-open
-set sidebar_visible
-set sidebar_format = "%B%<F? [%F]>%* %<N?%N/>%S"
 
 # cache
 set header_cache_backend = lmdb

@@ -5,3 +5,4 @@ source ~/.config/mutt/proton.rc
 # account switching
 macro index \ep ":source ~/.config/mutt/proton.rc<enter>c!<enter>" "Switch to Proton"
 macro index \eg ":source ~/.config/mutt/google.rc<enter>c!<enter>" "Switch to Google"
+macro index \ew ":source ~/.config/mutt/hsalehipour.rc<enter>c!<enter>" "Switch to Work"
