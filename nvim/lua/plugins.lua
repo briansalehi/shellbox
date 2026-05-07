@@ -398,6 +398,11 @@ do
     map('<leader>mb', 'CMakeBuild',              'CMake: build')
     map('<leader>mf', 'CMakeBuildCurrentFile',   'CMake: build')
     map('<leader>mr', 'CMakeRun',                'CMake: run')
+    vim.keymap.set('n', '<leader>mR', function()
+        vim.ui.input({ prompt = 'Launch args args: ' }, function(args)
+            if args then vim.cmd('CMakeLaunchArgs ' .. args) end
+        end)
+    end, { desc = 'CMake: set launch args' })
     map('<leader>md', 'CMakeDebug',              'CMake: debug')
     map('<leader>mc', 'CMakeClean',              'CMake: clean')
     map('<leader>mC', 'CMakeSettings',           'CMake: clean')
