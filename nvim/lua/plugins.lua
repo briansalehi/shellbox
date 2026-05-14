@@ -110,6 +110,7 @@ vim.keymap.set('n', '<leader>fg', telescope_builtin.live_grep)
 vim.keymap.set('n', '<leader>fi', telescope_builtin.git_files)
 vim.keymap.set('n', '<leader>fb', telescope_builtin.buffers)
 vim.keymap.set('n', '<leader>fh', telescope_builtin.help_tags)
+vim.keymap.set('n', '<leader>fk', telescope_builtin.keymaps,   { desc = 'Find keymaps' })
 
 -- tree sitter
 vim.pack.add({'https://github.com/nvim-treesitter/nvim-treesitter'})
@@ -235,6 +236,17 @@ vim.pack.add({'https://github.com/preservim/tagbar'})
 
 -- dashboard
 vim.pack.add({'https://github.com/glepnir/dashboard-nvim'})
+
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'dashboard',
+    callback = function()
+        vim.api.nvim_create_autocmd('BufLeave', {
+            buffer = 0,
+            once = true,
+            callback = function() vim.opt.signcolumn = 'yes' end,
+        })
+    end,
+})
 
 -- cmake tools
 vim.pack.add({
@@ -403,12 +415,12 @@ do
             if args then vim.cmd('CMakeLaunchArgs ' .. args) end
         end)
     end, { desc = 'CMake: set launch args' })
-    map('<leader>md', 'CMakeDebug',              'CMake: debug')
+    vim.keymap.set('n', '<leader>md', function() require('cmake-tools').debug({}) end, { desc = 'CMake: debug' })
     map('<leader>mc', 'CMakeClean',              'CMake: clean')
     map('<leader>mC', 'CMakeSettings',           'CMake: clean')
     map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
     map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
-    map('<leader>mt', 'CMakeTest',               'CMake: test')
+    map('<leader>mt', 'CMakeRunTest',             'CMake: test')
     map('<leader>mi', 'CMakeInstall',            'CMake: install')
     map('<leader>mT', 'CMakeSelectBuildType',    'CMake: select build type')
     map('<leader>mB', 'CMakeSelectBuildTarget',  'CMake: select build target')
@@ -512,8 +524,69 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end,
 })
 
--- gdb plugin
-vim.pack.add({'https://github.com/sakhnik/nvim-gdb'})
+-- nvim-dap + codelldb
+vim.pack.add({
+    'https://github.com/mfussenegger/nvim-dap',
+    'https://github.com/rcarriga/nvim-dap-ui',
+    'https://github.com/nvim-neotest/nvim-nio',
+})
+
+local dap = require('dap')
+local dapui = require('dapui')
+
+dap.adapters.codelldb = {
+    type = 'server',
+    port = '${port}',
+    executable = {
+        command = vim.fn.expand('~/.local/share/nvim/codelldb/extension/adapter/codelldb'),
+        args = { '--port', '${port}' },
+    },
+}
+
+dapui.setup()
+
+vim.fn.sign_define('DapBreakpoint',         { text = "\u{F111}", texthl = 'DapBreakpoint',         linehl = '', numhl = '' })
+vim.fn.sign_define('DapBreakpointCondition',{ text = "\u{F444}", texthl = 'DapBreakpointCondition', linehl = '', numhl = '' })
+vim.fn.sign_define('DapLogPoint',           { text = "\u{F27A}", texthl = 'DapLogPoint',            linehl = '', numhl = '' })
+vim.fn.sign_define('DapStopped',            { text = "\u{F04B}", texthl = 'DapStopped',             linehl = 'DapStoppedLine', numhl = '' })
+vim.fn.sign_define('DapBreakpointRejected', { text = "\u{F05E}", texthl = 'DapBreakpointRejected',  linehl = '', numhl = '' })
+
+vim.api.nvim_set_hl(0, 'DapBreakpoint',         { fg = '#e06c75' })
+vim.api.nvim_set_hl(0, 'DapBreakpointCondition',{ fg = '#e5c07b' })
+vim.api.nvim_set_hl(0, 'DapLogPoint',           { fg = '#61afef' })
+vim.api.nvim_set_hl(0, 'DapStopped',            { fg = '#98c379' })
+vim.api.nvim_set_hl(0, 'DapBreakpointRejected', { fg = '#888888' })
+vim.api.nvim_set_hl(0, 'DapStoppedLine',        { bg = '#2a3b2a' })
+
+dap.listeners.after.event_initialized['dapui_config'] = function() dapui.open() end
+dap.listeners.before.event_terminated['dapui_config'] = function() dapui.close() end
+dap.listeners.before.event_exited['dapui_config']     = function() dapui.close() end
+
+-- cmake-tools ran register_dap_function() before nvim-dap was loaded; re-run it now
+require('cmake-tools').register_dap_function()
+
+do
+    local map = function(lhs, fn, desc)
+        vim.keymap.set('n', lhs, fn, { desc = desc })
+    end
+    map('<leader>dc',   dap.continue,          'DAP: continue')
+    map('<leader>dn',   dap.step_over,         'DAP: step over')
+    map('<leader>di',   dap.step_into,         'DAP: step into')
+    map('<leader>do',   dap.step_out,          'DAP: step out')
+    map('<leader>db',   dap.toggle_breakpoint,  'DAP: toggle breakpoint')
+    map('<leader>dB',   function()
+        dap.set_breakpoint(vim.fn.input('Condition: '))
+    end, 'DAP: conditional breakpoint')
+    map('<leader>dl',   function()
+        dap.set_breakpoint(nil, nil, vim.fn.input('Log message: '))
+    end, 'DAP: log point')
+    map('<leader>dC',   dap.clear_breakpoints,  'DAP: clear all breakpoints')
+    map('<leader>dR',   dap.run_to_cursor,      'DAP: run to cursor')
+    map('<leader>dh',   require('dap.ui.widgets').hover, 'DAP: hover variable')
+    map('<leader>dx',   dap.terminate,          'DAP: terminate session')
+    map('<leader>dr',   dap.repl.open,          'DAP: open REPL')
+    map('<leader>du',   dapui.toggle,           'DAP: toggle UI')
+end
 
 -- claude code
 vim.pack.add({'https://github.com/greggh/claude-code.nvim'})
