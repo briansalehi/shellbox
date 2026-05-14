@@ -12,6 +12,12 @@
 -- vim.pack.add({'https://github.com/cdelledonne/vim-cmake'}) -- conflicts with cmake-tools
 -- vim.pack.add({'https://github.com/octol/vim-cpp-enhanced-highlight'}) -- conflicts with treesitter
 
+-- which-key
+vim.pack.add({'https://github.com/folke/which-key.nvim'})
+
+-- harpoon
+vim.pack.add({ { src = 'https://github.com/ThePrimeagen/harpoon', version = 'harpoon2' } })
+
 -- color scheme
 vim.pack.add({
     'https://github.com/loctvl842/monokai-pro.nvim',
@@ -97,7 +103,13 @@ require('telescope').setup({
   pickers = {
       find_files = {
           hidden = true,
-      }
+      },
+      buffers = {
+          mappings = {
+              n = { ['<C-d>'] = require('telescope.actions').delete_buffer },
+              i = { ['<C-d>'] = require('telescope.actions').delete_buffer },
+          },
+      },
   },
   extensions = {
   }
@@ -139,12 +151,15 @@ vim.pack.add({
     'https://github.com/hrsh7th/cmp-buffer',
     'https://github.com/L3MON4D3/LuaSnip',
     'https://github.com/saadparwaiz1/cmp_luasnip',
+    'https://github.com/rafamadriz/friendly-snippets',
 })
 
 local cmp = require('cmp')
 local luasnip = require('luasnip')
+require('luasnip.loaders.from_vscode').lazy_load()
 
 cmp.setup({
+    completion = { autocomplete = false },
     snippet = {
         expand = function(args)
             luasnip.lsp_expand(args.body)
@@ -169,40 +184,23 @@ cmp.setup({
     }),
     sources = cmp.config.sources({
         { name = 'nvim_lsp' },
-        { name = 'luasnip' },
     }, {
         { name = 'buffer' },
     }),
 })
 
--- git blame
-vim.pack.add({'https://github.com/zivyangll/git-blame.vim'})
-
--- gitsigns
-vim.pack.add({'https://github.com/lewis6991/gitsigns.nvim'})
-require('gitsigns').setup({
-    signs = {
-        add          = { text = '▎' },
-        change       = { text = '▎' },
-        delete       = { text = '▁' },
-        topdelete    = { text = '▔' },
-        changedelete = { text = '▎' },
-        untracked    = { text = '▎' },
-    },
-    on_attach = function(bufnr)
-        local gs = package.loaded.gitsigns
-        local map = function(mode, l, r, desc)
-            vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
-        end
-        map('n', ']h', gs.next_hunk,        'Next hunk')
-        map('n', '[h', gs.prev_hunk,        'Prev hunk')
-        map('n', '<leader>hs', gs.stage_hunk,   'Stage hunk')
-        map('n', '<leader>hu', gs.undo_stage_hunk, 'Undo stage hunk')
-        map('n', '<leader>hr', gs.reset_hunk,   'Reset hunk')
-        map('n', '<leader>hp', gs.preview_hunk, 'Preview hunk')
-        map('n', '<leader>hb', gs.blame_line,   'Blame line')
-    end,
-})
+-- diffview
+vim.pack.add({'https://github.com/sindrets/diffview.nvim'})
+require('diffview').setup()
+do
+    local map = function(lhs, cmd, desc)
+        vim.keymap.set('n', lhs, '<cmd>' .. cmd .. '<CR>', { desc = desc })
+    end
+    map('<leader>gd', 'DiffviewOpen',                    'Git: diff working tree')
+    map('<leader>gh', 'DiffviewFileHistory %',           'Git: file history')
+    map('<leader>gH', 'DiffviewFileHistory',             'Git: repo history')
+    map('<leader>gc', 'DiffviewClose',                   'Git: close')
+end
 
 -- lualine
 vim.pack.add({'https://github.com/nvim-lualine/lualine.nvim'})
@@ -226,10 +224,6 @@ require('lualine').setup({
 -- vim.pack.add({'https://github.com/vim-airline/vim-airline.git'})
 
 -- nerd tree
-vim.pack.add({'https://github.com/scrooloose/nerdtree'})
--- vim.pack.add({'https://github.com/preservim/nerdtree'})
-vim.keymap.set('n', '<leader>e', ':NERDTreeToggle<CR>', { silent = true, desc = 'Toggle NERDTree' })
-vim.keymap.set('n', '<leader>ef', ':NERDTreeFind<CR>',  { silent = true, desc = 'Reveal file in NERDTree' })
 
 -- tag bar
 vim.pack.add({'https://github.com/preservim/tagbar'})
@@ -450,11 +444,13 @@ vim.keymap.set('v', '<leader>uf', function() require('conform').format({ async =
 
 -- oil.nvim - filesystem manager
 vim.pack.add({'https://github.com/stevearc/oil.nvim'})
-require('oil').setup()
-vim.keymap.set('n', '-', '<cmd>Oil<CR>', { desc = 'Open parent directory in oil' })
+require('oil').setup({
+    view_options = { show_hidden = true },
+})
+vim.keymap.set('n', '<leader>e', '<cmd>Oil<CR>', { desc = 'Explorer: open directory' })
+vim.keymap.set('n', '-',         '<cmd>Oil<CR>', { desc = 'Explorer: open directory' })
 
 -- git plugin
-vim.pack.add({'https://github.com/tpope/vim-fugitive'})
 
 vim.pack.add({'https://github.com/dkarter/bullets.vim'})
 
@@ -652,3 +648,74 @@ require("claude-code").setup({
   }
 })
 vim.keymap.set('n', '<leader>cc', '<cmd>ClaudeCode<CR>', { desc = 'Toggle Claude Code' })
+
+-- harpoon
+do
+    local harpoon = require('harpoon')
+    harpoon:setup()
+
+    vim.keymap.set('n', '<leader>a',  function() harpoon:list():add() end,                        { desc = 'Harpoon: add file' })
+    vim.keymap.set('n', '<leader>h',  function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, { desc = 'Harpoon: menu' })
+    vim.keymap.set('n', '<leader>1',  function() harpoon:list():select(1) end,                    { desc = 'Harpoon: file 1' })
+    vim.keymap.set('n', '<leader>2',  function() harpoon:list():select(2) end,                    { desc = 'Harpoon: file 2' })
+    vim.keymap.set('n', '<leader>3',  function() harpoon:list():select(3) end,                    { desc = 'Harpoon: file 3' })
+    vim.keymap.set('n', '<leader>4',  function() harpoon:list():select(4) end,                    { desc = 'Harpoon: file 4' })
+end
+
+-- flash.nvim
+vim.pack.add({'https://github.com/folke/flash.nvim'})
+do
+    local flash = require('flash')
+    flash.setup({ modes = { char = { enabled = false } } })
+    vim.keymap.set({ 'n', 'x', 'o' }, '<leader>s', flash.jump,       { desc = 'Flash: jump' })
+    vim.keymap.set({ 'n', 'x', 'o' }, '<leader>S', flash.treesitter, { desc = 'Flash: treesitter' })
+    vim.keymap.set('o',               'r',     flash.remote,           { desc = 'Flash: remote' })
+    vim.keymap.set({ 'o', 'x' },      'R',     flash.treesitter_search,{ desc = 'Flash: treesitter search' })
+    vim.keymap.set('c',               '<C-s>', flash.toggle,           { desc = 'Flash: toggle in search' })
+end
+
+-- trouble.nvim
+vim.pack.add({'https://github.com/folke/trouble.nvim'})
+require('trouble').setup()
+do
+    local map = function(lhs, cmd, desc)
+        vim.keymap.set('n', lhs, '<cmd>Trouble ' .. cmd .. '<cr>', { desc = desc })
+    end
+    map('<leader>xx', 'diagnostics toggle',                  'Trouble: all diagnostics')
+    map('<leader>xd', 'diagnostics toggle filter.buf=0',     'Trouble: buffer diagnostics')
+    map('<leader>xq', 'qflist toggle',                       'Trouble: quickfix')
+    map('<leader>xl', 'loclist toggle',                      'Trouble: location list')
+    map('<leader>xr', 'lsp_references toggle',               'Trouble: LSP references')
+    map('<leader>xs', 'lsp_document_symbols toggle',         'Trouble: document symbols')
+end
+
+-- mini.ai
+vim.pack.add({'https://github.com/nvim-mini/mini.ai'})
+require('mini.ai').setup()
+
+-- auto-session
+vim.pack.add({'https://github.com/rmagatti/auto-session'})
+require('auto-session').setup({
+    suppressed_dirs = { '~/', '/' },
+})
+
+-- undotree
+vim.pack.add({'https://github.com/mbbill/undotree'})
+vim.keymap.set('n', '<leader>U', '<cmd>UndotreeToggle<CR>', { desc = 'Undotree: toggle' })
+
+-- which-key: group labels
+local wk = require('which-key')
+wk.setup({ delay = 1000 })
+wk.add({
+    { '<leader>f', group = 'find' },
+    { '<leader>e', group = 'oil' },
+    { '<leader>m', group = 'cmake' },
+    { '<leader>g', group = 'git' },
+    { '<leader>h', group = 'harpoon' },
+    { '<leader>d', group = 'debug' },
+    { '<leader>l', group = 'lsp' },
+    { '<leader>u', group = 'format' },
+    { '<leader>c', group = 'claude' },
+    { '<leader>r', group = 'refactor' },
+    { '<leader>x', group = 'trouble' },
+})
