@@ -1,10 +1,13 @@
-# For new mail:
-color index brightblue black "~N"
+# Default index colors (read mail - dimmed):
+color index color242 default '.*'
+
+# Unread mail - white:
+color index white default '~U'
+
+# New mail - bright blue:
+color index brightblue default '~N'
 #color index_author brightred white "~N"
 #color index_subject brightcyan white "~N"
-
-# Default index colors:
-color index white default '.*'
 
 # Communities
 color index blue default '.*\[boost\].*' # Special Case
@@ -28,11 +31,12 @@ mono underline underline
 mono indicator reverse
 mono error bold
 color normal default default
-color indicator brightblack black
-color sidebar_highlight red default
-color sidebar_divider brightblack black
-color sidebar_flagged red black
-color sidebar_new green black
+color indicator default color238
+color sidebar_ordinary color242 default
+color sidebar_highlight brightwhite color238
+color sidebar_divider color238 default
+color sidebar_flagged brightred default
+color sidebar_new brightgreen default
 color normal brightyellow default
 color error red default
 color tilde white default

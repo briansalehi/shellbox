@@ -16,4 +16,4 @@ set ssl_verify_dates = yes
 
 source 'gpg --decrypt ~/.config/mutt/proton.asc |'
 
-mailboxes +Inbox +Sent +Drafts +Trash +Archive +Technical +Financial
+mailboxes +Inbox +Sent +Drafts +Trash +Archive +"Folders/Technical" +"Folders/Financial"
