@@ -1,5 +1,4 @@
 export LC_CTYPE=en_US.UTF-8
-unset LD_LIBRARY_PATH
 
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
