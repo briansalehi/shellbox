@@ -1,85 +1,63 @@
 -- abandoned
--- vim.pack.add({'https://github.com/puremourning/vimspector'}) -- duplicates nvim-gdb
--- vim.pack.add({'https://github.com/dense-analysis/ale'}) -- conflicts with already using vim.lsp
--- vim.pack.add({'https://github.com/neovim/nvim-lspconfig'}) -- conflicts with already using vim.lsp
--- vim.pack.add({'https://github.com/Valloric/YouCompleteMe'}) -- conflicts with already using vim.lsp and nvim-cmp
--- vim.pack.add({'https://github.com/neoclide/coc.nvim'}) -- conflicts with already using vim.lsp
--- vim.pack.add({'https://github.com/ms-jpq/coq_nvim'}) -- conflicts with already using vim.lsp
--- vim.pack.add({'https://github.com/s1n7ax/nvim-terminal'}) -- conflicts with toggleterm required by cmake-tools
--- vim.pack.add({'https://github.com/nvim-lua/completion-nvim'}) -- outdated and unmaintained
--- vim.pack.add({'https://github.com/SirVer/ultisnips'}) -- conflicts with LuaSnip
--- vim.pack.add({'https://github.com/honza/vim-snippets'}) -- useless, required by ultisnips
--- vim.pack.add({'https://github.com/cdelledonne/vim-cmake'}) -- conflicts with cmake-tools
--- vim.pack.add({'https://github.com/octol/vim-cpp-enhanced-highlight'}) -- conflicts with treesitter
+-- 'vimspector' -- duplicates nvim-gdb
+-- 'ale' -- conflicts with already using vim.lsp
+-- 'nvim-lspconfig' -- conflicts with already using vim.lsp
+-- 'YouCompleteMe' -- conflicts with already using vim.lsp and nvim-cmp
+-- 'coc.nvim' -- conflicts with already using vim.lsp
+-- 'coq_nvim' -- conflicts with already using vim.lsp
+-- 'nvim-terminal' -- conflicts with toggleterm required by cmake-tools
+-- 'completion-nvim' -- outdated and unmaintained
+-- 'ultisnips' -- conflicts with luasnip
+-- 'vim-snippets' -- useless, required by ultisnips
+-- 'vim-cmake' -- conflicts with cmake-tools
+-- 'vim-cpp-enhanced-highlight' -- conflicts with treesitter
+-- 'gitsign', 'gitdiff' -- replaced by diffview
+-- 'vim-airline' -- replaced by lualine
 
--- which-key
-vim.pack.add({'https://github.com/folke/which-key.nvim'})
-
--- harpoon
-vim.pack.add({ { src = 'https://github.com/ThePrimeagen/harpoon', version = 'harpoon2' } })
-
--- color scheme
 vim.pack.add({
-    'https://github.com/loctvl842/monokai-pro.nvim',
-    'https://github.com/folke/tokyonight.nvim',
-    'https://github.com/tiagovla/tokyodark.nvim',
-    'https://github.com/ellisonleao/gruvbox.nvim',
-    'https://github.com/scottmckendry/cyberdream.nvim',
+    'https://github.com/folke/which-key.nvim',
     'https://github.com/Shatur/neovim-ayu',
-    'https://github.com/rafi/awesome-vim-colorschemes',
-    'https://github.com/joshdick/onedark.vim'
+    'https://github.com/nvim-lua/plenary.nvim',
+    'https://github.com/nvim-tree/nvim-web-devicons',
+    'https://github.com/nvim-telescope/telescope-fzf-native.nvim',
+    'https://github.com/nvim-telescope/telescope.nvim',
+    'https://github.com/nvim-treesitter/nvim-treesitter',
+    'https://github.com/farmergreg/vim-lastplace',
+    'https://github.com/kylechui/nvim-surround',
+    'https://github.com/tpope/vim-commentary',
+    'https://github.com/hrsh7th/nvim-cmp',
+    'https://github.com/hrsh7th/cmp-nvim-lsp',
+    'https://github.com/hrsh7th/cmp-buffer',
+    'https://github.com/L3MON4D3/LuaSnip',
+    'https://github.com/saadparwaiz1/cmp_luasnip',
+    'https://github.com/rafamadriz/friendly-snippets',
+    'https://github.com/sindrets/diffview.nvim',
+    'https://github.com/nvim-lualine/lualine.nvim',
+    'https://github.com/preservim/tagbar',
+    'https://github.com/glepnir/dashboard-nvim',
+    'https://github.com/nvim-lua/plenary.nvim',
+    'https://github.com/stevearc/overseer.nvim',
+    'https://github.com/akinsho/toggleterm.nvim',
+    'https://github.com/Civitasv/cmake-tools.nvim',
+    'https://github.com/stevearc/conform.nvim',
+    'https://github.com/stevearc/oil.nvim',
+    'https://github.com/dkarter/bullets.vim',
+    'https://github.com/shime/vim-livedown',
+    'https://github.com/szw/vim-maximizer',
+    'https://github.com/p00f/clangd_extensions.nvim',
+    'https://github.com/mfussenegger/nvim-dap',
+    'https://github.com/rcarriga/nvim-dap-ui',
+    'https://github.com/nvim-neotest/nvim-nio',
+    'https://github.com/greggh/claude-code.nvim',
+    'https://github.com/folke/flash.nvim',
+    'https://github.com/folke/trouble.nvim',
+    'https://github.com/nvim-mini/mini.ai',
+    'https://github.com/rmagatti/auto-session',
+    'https://github.com/mbbill/undotree',
+    { src = 'https://github.com/ThePrimeagen/harpoon', version = 'harpoon2' }
 })
 
-require("monokai-pro").setup({
-  transparent_background = false,
-  terminal_colors = true,
-  devicons = true,
-  styles = {
-    comment = { italic = true },
-    keyword = { italic = true },
-    type = { italic = true },
-    storageclass = { italic = true },
-    structure = { italic = true },
-    parameter = { italic = true },
-    annotation = { italic = true },
-    tag_attribute = { italic = true },
-  },
-  filter = "pro", -- classic | octagon | pro | machine | ristretto | spectrum
-  day_night = {
-    enable = false,
-    day_filter = "pro",
-    night_filter = "spectrum",
-  },
-  inc_search = "background", -- underline | background
-  background_clear = {
-    "toggleterm",
-    "telescope",
-    "renamer",
-    "notify",
-  },
-  plugins = {
-    bufferline = {
-      underline_selected = false,
-      underline_visible = false,
-      underline_fill = false,
-      bold = true,
-    },
-    indent_blankline = {
-      context_highlight = "default", -- default | pro
-      context_start_underline = false,
-    },
-  },
-  override = function(scheme)
-    return {}
-  end,
-  override_palette = function(filter)
-    return {}
-  end,
-  override_scheme = function(scheme, palette, colors)
-    return {}
-  end,
-})
-
+-- ayu
 require('ayu').setup({
     mirage = false, -- Set to `true` to use `mirage` variant instead of `dark` for dark background.
     terminal = true, -- Set to `false` to let terminal manage its own colors.
@@ -89,13 +67,6 @@ require('ayu').setup({
 vim.cmd('colorscheme ayu')
 
 -- telescope
-vim.pack.add({
-    'https://github.com/nvim-lua/plenary.nvim',
-    'https://github.com/nvim-tree/nvim-web-devicons',
-    'https://github.com/nvim-telescope/telescope-fzf-native.nvim',
-    'https://github.com/nvim-telescope/telescope.nvim'
-})
-
 require('telescope').setup({
   defaults = {
     file_ignore_patterns = { 'build/', '.git/', '.idea/' },
@@ -125,7 +96,6 @@ vim.keymap.set('n', '<leader>fh', telescope_builtin.help_tags)
 vim.keymap.set('n', '<leader>fk', telescope_builtin.keymaps,   { desc = 'Find keymaps' })
 
 -- tree sitter
-vim.pack.add({'https://github.com/nvim-treesitter/nvim-treesitter'})
 require('nvim-treesitter').install({"c", "cpp", "lua", "cmake"})
 
 vim.api.nvim_create_autocmd('FileType', {
@@ -135,26 +105,10 @@ vim.api.nvim_create_autocmd('FileType', {
     end,
 })
 
--- vim last place
-vim.pack.add({'https://github.com/farmergreg/vim-lastplace'})
-
--- nvim surround
-vim.pack.add({'https://github.com/kylechui/nvim-surround'})
-
--- vim commentary
-vim.pack.add({'https://github.com/tpope/vim-commentary'})
-
 -- completion
-vim.pack.add({
-    'https://github.com/hrsh7th/nvim-cmp',
-    'https://github.com/hrsh7th/cmp-nvim-lsp',
-    'https://github.com/hrsh7th/cmp-buffer',
-    'https://github.com/L3MON4D3/LuaSnip',
-    'https://github.com/saadparwaiz1/cmp_luasnip',
-    'https://github.com/rafamadriz/friendly-snippets',
-})
-
 local cmp = require('cmp')
+
+-- luasnip
 local luasnip = require('luasnip')
 require('luasnip.loaders.from_vscode').lazy_load()
 
@@ -190,7 +144,6 @@ cmp.setup({
 })
 
 -- diffview
-vim.pack.add({'https://github.com/sindrets/diffview.nvim'})
 require('diffview').setup()
 do
     local map = function(lhs, cmd, desc)
@@ -203,7 +156,6 @@ do
 end
 
 -- lualine
-vim.pack.add({'https://github.com/nvim-lualine/lualine.nvim'})
 require('lualine').setup({
     options = {
         theme = 'monokai-pro',
@@ -220,17 +172,7 @@ require('lualine').setup({
     },
 })
 
--- vim airline (replaced by lualine)
--- vim.pack.add({'https://github.com/vim-airline/vim-airline.git'})
-
--- nerd tree
-
--- tag bar
-vim.pack.add({'https://github.com/preservim/tagbar'})
-
 -- dashboard
-vim.pack.add({'https://github.com/glepnir/dashboard-nvim'})
-
 vim.api.nvim_create_autocmd('FileType', {
     pattern = 'dashboard',
     callback = function()
@@ -243,13 +185,6 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 -- cmake tools
-vim.pack.add({
-    'https://github.com/nvim-lua/plenary.nvim',
-    'https://github.com/stevearc/overseer.nvim',
-    'https://github.com/akinsho/toggleterm.nvim',
-    'https://github.com/Civitasv/cmake-tools.nvim'
-})
-
 local osys = require("cmake-tools.osys")
 require("cmake-tools").setup {
   cmake_command = "cmake", -- this is used to specify cmake command path
@@ -427,7 +362,6 @@ do
 end
 
 -- conform.nvim - uncrustify formatter
-vim.pack.add({'https://github.com/stevearc/conform.nvim'})
 require('conform').setup({
     formatters_by_ft = {
         c   = { 'uncrustify' },
@@ -443,20 +377,11 @@ vim.keymap.set('n', '<leader>uf', function() require('conform').format({ async =
 vim.keymap.set('v', '<leader>uf', function() require('conform').format({ async = true }) end, { desc = 'Uncrustify format selection' })
 
 -- oil.nvim - filesystem manager
-vim.pack.add({'https://github.com/stevearc/oil.nvim'})
 require('oil').setup({
     view_options = { show_hidden = true },
 })
 vim.keymap.set('n', '<leader>e', '<cmd>Oil<CR>', { desc = 'Explorer: open directory' })
 vim.keymap.set('n', '-',         '<cmd>Oil<CR>', { desc = 'Explorer: open directory' })
-
--- git plugin
-
-vim.pack.add({'https://github.com/dkarter/bullets.vim'})
-
-vim.pack.add({'https://github.com/shime/vim-livedown'})
-
-vim.pack.add({'https://github.com/szw/vim-maximizer'})
 
 -- trailing whitespace: highlight and trim on save
 vim.api.nvim_set_hl(0, 'TrailingWhitespace', { bg = '#ff0000' })
@@ -471,7 +396,6 @@ vim.api.nvim_create_autocmd('BufWritePre', {
 })
 
 -- clangd extensions
-vim.pack.add({'https://github.com/p00f/clangd_extensions.nvim'})
 require("clangd_extensions").setup({
     inlay_hints = {
         inline = true,
@@ -521,11 +445,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 -- nvim-dap + codelldb
-vim.pack.add({
-    'https://github.com/mfussenegger/nvim-dap',
-    'https://github.com/rcarriga/nvim-dap-ui',
-    'https://github.com/nvim-neotest/nvim-nio',
-})
 
 local dap = require('dap')
 local dapui = require('dapui')
@@ -585,7 +504,6 @@ do
 end
 
 -- claude code
-vim.pack.add({'https://github.com/greggh/claude-code.nvim'})
 require("claude-code").setup({
   -- Terminal window settings
   window = {
@@ -663,7 +581,6 @@ do
 end
 
 -- flash.nvim
-vim.pack.add({'https://github.com/folke/flash.nvim'})
 do
     local flash = require('flash')
     flash.setup({ modes = { char = { enabled = false } } })
@@ -675,7 +592,6 @@ do
 end
 
 -- trouble.nvim
-vim.pack.add({'https://github.com/folke/trouble.nvim'})
 require('trouble').setup()
 do
     local map = function(lhs, cmd, desc)
@@ -690,17 +606,14 @@ do
 end
 
 -- mini.ai
-vim.pack.add({'https://github.com/nvim-mini/mini.ai'})
 require('mini.ai').setup()
 
 -- auto-session
-vim.pack.add({'https://github.com/rmagatti/auto-session'})
 require('auto-session').setup({
     suppressed_dirs = { '~/', '/' },
 })
 
 -- undotree
-vim.pack.add({'https://github.com/mbbill/undotree'})
 vim.keymap.set('n', '<leader>U', '<cmd>UndotreeToggle<CR>', { desc = 'Undotree: toggle' })
 
 -- which-key: group labels
