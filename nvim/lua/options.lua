@@ -28,4 +28,3 @@ opt.completeopt = "menu,noselect"
 opt.encoding = "utf-8"
 opt.fileencoding = "utf-8"
 opt.mouse = ""
-opt.undofile = true

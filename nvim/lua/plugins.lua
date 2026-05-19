@@ -96,10 +96,10 @@ vim.keymap.set('n', '<leader>fh', telescope_builtin.help_tags)
 vim.keymap.set('n', '<leader>fk', telescope_builtin.keymaps,   { desc = 'Find keymaps' })
 
 -- tree sitter
-require('nvim-treesitter').install({"c", "cpp", "lua", "cmake"})
+require('nvim-treesitter').install({"c", "cpp", "lua", "cmake", "python", "rust"})
 
 vim.api.nvim_create_autocmd('FileType', {
-    pattern = { 'c', 'cpp', 'lua', 'cmake' },
+    pattern = { 'c', 'cpp', 'lua', 'cmake', 'python', 'rust' },
     callback = function()
         pcall(vim.treesitter.start)
     end,

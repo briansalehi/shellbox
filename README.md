@@ -9,7 +9,7 @@ Combination of shell-related utilities.
 The list of entire packages required for Fedora setup:
 
 ```sh
-sudo dnf install gcc g++ gdb clang-devel wget proton-vpn-cli qbittorrent vsftpd gpgme-devel gnupg2-smime lua-devel compat-lua-devel notmuch-devel sqlite-devel ncurses-devel gnutls-devel lmdb-devel lz4-devel krb5-devel libasan libgsasl-devel cmake claude-code gnome-tweaks gnome-shell-extension-manager gnome-shell-extension-appindicator gnome-shell-extension-dash-to-panel gnome-extensions-app gnome-browser-connector cargo dbus-devel gdk-pixbuf2 gdk-pixbuf2-devel cairo-gobject-devel libsoup-devel javascriptcoregtk4.1-devel atk-devel rust-gdk4-devel gtk3-devel webkit2gtk4.1-devel wine steam
+sudo dnf install gcc g++ gdb clang-devel wget proton-vpn-cli qbittorrent vsftpd gpgme-devel gnupg2-smime lua-devel compat-lua-devel notmuch-devel sqlite-devel ncurses-devel gnutls-devel lmdb-devel lz4-devel krb5-devel libasan libgsasl-devel cmake claude-code gnome-tweaks gnome-shell-extension-manager gnome-shell-extension-appindicator gnome-shell-extension-dash-to-panel gnome-extensions-app gnome-browser-connector cargo dbus-devel gdk-pixbuf2 gdk-pixbuf2-devel cairo-gobject-devel libsoup-devel javascriptcoregtk4.1-devel atk-devel rust-gdk4-devel gtk3-devel webkit2gtk4.1-devel wine steam protobuf-devel grpc-devel grpc-cpp
 ```
 
 ### Proton VPN
