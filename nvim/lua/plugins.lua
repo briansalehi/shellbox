@@ -61,7 +61,9 @@ vim.pack.add({
 require('ayu').setup({
     mirage = false, -- Set to `true` to use `mirage` variant instead of `dark` for dark background.
     terminal = true, -- Set to `false` to let terminal manage its own colors.
-    overrides = {}, -- A dictionary of group names, each associated with a dictionary of parameters (`bg`, `fg`, `sp` and `style`) and colors in hex.
+    overrides = {
+        LineNr = { fg = '#7A3030' },
+    }, -- A dictionary of group names, each associated with a dictionary of parameters (`bg`, `fg`, `sp` and `style`) and colors in hex.
 })
 
 vim.cmd('colorscheme ayu')
@@ -584,11 +586,11 @@ end
 do
     local flash = require('flash')
     flash.setup({ modes = { char = { enabled = false } } })
-    vim.keymap.set({ 'n', 'x', 'o' }, '<leader>s', flash.jump,       { desc = 'Flash: jump' })
-    vim.keymap.set({ 'n', 'x', 'o' }, '<leader>S', flash.treesitter, { desc = 'Flash: treesitter' })
-    vim.keymap.set('o',               'r',     flash.remote,           { desc = 'Flash: remote' })
-    vim.keymap.set({ 'o', 'x' },      'R',     flash.treesitter_search,{ desc = 'Flash: treesitter search' })
-    vim.keymap.set('c',               '<C-s>', flash.toggle,           { desc = 'Flash: toggle in search' })
+    vim.keymap.set({ 'n', 'x', 'o' }, '<leader>s', flash.jump,             { desc = 'Flash: jump' })
+    vim.keymap.set({ 'n', 'x', 'o' }, '<leader>S', flash.treesitter,       { desc = 'Flash: treesitter' })
+    vim.keymap.set('o',               'r',         flash.remote,           { desc = 'Flash: remote' })
+    vim.keymap.set({ 'o', 'x' },      'R',         flash.treesitter_search,{ desc = 'Flash: treesitter search' })
+    vim.keymap.set('c',               '<C-s>',     flash.toggle,           { desc = 'Flash: toggle in search' })
 end
 
 -- trouble.nvim
@@ -616,6 +618,15 @@ require('auto-session').setup({
 -- undotree
 vim.keymap.set('n', '<leader>U', '<cmd>UndotreeToggle<CR>', { desc = 'Undotree: toggle' })
 
+-- quickfix
+do
+    local map = function(lhs, cmd, desc)
+        vim.keymap.set('n', lhs, '<cmd>' .. cmd .. '<CR>', { desc = desc })
+    end
+    map('<leader>qo', 'copen',  'Quickfix: open')
+    map('<leader>qc', 'cclose', 'Quickfix: close')
+end
+
 -- which-key: group labels
 local wk = require('which-key')
 wk.setup({ delay = 1000 })
@@ -631,4 +642,5 @@ wk.add({
     { '<leader>c', group = 'claude' },
     { '<leader>r', group = 'refactor' },
     { '<leader>x', group = 'trouble' },
+    { '<leader>q', group = 'quickfix' },
 })
