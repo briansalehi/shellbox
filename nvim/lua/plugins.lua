@@ -512,6 +512,7 @@ require("claude-code").setup({
     split_ratio = 0.3,      -- Percentage of screen for the terminal window (height for horizontal, width for vertical splits)
     position = "botright",  -- Position of the window: "botright", "topleft", "vertical", "float", etc.
     enter_insert = true,    -- Whether to enter insert mode when opening Claude Code
+    start_in_normal_mode = true, -- Disable auto-startinsert on WinEnter so scrollback position survives window switches
     hide_numbers = true,    -- Hide line numbers in the terminal window
     hide_signcolumn = true, -- Hide the sign column in the terminal window
 
@@ -567,7 +568,19 @@ require("claude-code").setup({
     scrolling = false,         -- Enable scrolling keymaps (<C-f/b>) for page up/down
   }
 })
-vim.keymap.set('n', '<leader>cc', '<cmd>ClaudeCode<CR>', { desc = 'Toggle Claude Code' })
+local function claude_toggle(cmd)
+  return function()
+    vim.cmd(cmd)
+    vim.schedule(function()
+      if vim.bo.buftype == 'terminal' then
+        vim.cmd('startinsert')
+      end
+    end)
+  end
+end
+vim.keymap.set('n', '<leader>cc', claude_toggle('ClaudeCode'),         { desc = 'Toggle Claude Code' })
+vim.keymap.set('n', '<leader>cC', claude_toggle('ClaudeCodeContinue'), { desc = 'Toggle Claude Code (continue)' })
+vim.keymap.set('n', '<leader>cV', claude_toggle('ClaudeCodeVerbose'),  { desc = 'Toggle Claude Code (verbose)' })
 
 -- harpoon
 do
