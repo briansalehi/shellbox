@@ -111,7 +111,6 @@ fi
 
 include_path "$ANDROID_HOME/cmdline-tools/latest"
 include_path "$ANDROID_HOME/platform-tools"
-include_path "/usr/local/src/qt/6.*/gcc_64"
 include_path "$HOME/.cargo"
 include_path "$HOME/.local"
 

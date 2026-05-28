@@ -584,3 +584,8 @@ sudo dnf install gpgme-devel gnupg2-smime lua-devel compat-lua-devel notmuch-dev
 ./configure --prefix=/usr/local --gnutls --gpgme --gss --lua --sqlite --autocrypt --lmdb --notmuch --lz4 --zlib --disable-doc --gsasl --fmemopen --with-lock=flock --locales-fix --homespool
 ```
 
+### LLVM Configuration Flags
+
+```sh
+cmake -G Ninja -S llvm -B build -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D LLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" -D LLVM_ENABLE_MODULES=ON -D LLVM_PARALLEL_COMPILE_JOBS=4 -D LLVM_PARALLEL_LINK_JOBS=4 -D LLVM_PARALLEL_TABLEGEN_JOBS=4
+```

@@ -14,14 +14,8 @@ set trash = +"Deleted Items"
 mailboxes +Inbox +Drafts +"Sent Items" +"Deleted Items" +"Junk Email" +Notes +Archive +"Conversation History" +"RSS-Abonnements"
 
 # SMTP
-set smtp_user = 'hsalehipour@ultratronik.de'
-set smtp_url = 'smtp://smtp-mail.outlook.com:587'
-set smtp_authenticators = 'xoauth2'
-set smtp_oauth_refresh_command = "/usr/local/share/neomutt/oauth2/mutt_oauth2.py ~/.config/mutt/hsalehipour@ultratronik.de.tokens"
+set sendmail = '/usr/bin/msmtp'
 set ssl_force_tls = yes
 set ssl_starttls = yes
 set ssl_verify_host = yes
 set ssl_verify_dates = yes
-set sendmail = '/usr/bin/msmtp'
-
-source 'gpg --decrypt ~/.config/mutt/hsalehipour.asc |'
