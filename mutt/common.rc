@@ -9,6 +9,7 @@ set sort_aux = reverse-last-date-received
 set move = no
 set pager_stop = yes
 set smart_wrap = yes
+set pipe_split = yes
 
 unset use_domain
 unset resolve
