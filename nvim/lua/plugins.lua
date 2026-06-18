@@ -441,7 +441,23 @@ vim.api.nvim_create_autocmd("LspAttach", {
             map("n", "<leader>la", "<cmd>ClangdAST<CR>",                { buffer = buf, desc = "Show AST" })
             map("n", "<leader>lm", "<cmd>ClangdMemoryUsage<CR>",        { buffer = buf, desc = "Memory usage" })
             map("n", "<leader>lt", "<cmd>ClangdTypeHierarchy<CR>",      { buffer = buf, desc = "Type hierarchy" })
-            map("n", "<leader>li", "<cmd>ClangdSymbolInfo<CR>",         { buffer = buf, desc = "Symbol info" })
+            map("n", "<leader>lS", "<cmd>ClangdSymbolInfo<CR>",         { buffer = buf, desc = "Symbol info" })
+            map("n", "<leader>li", function()
+                vim.lsp.buf.code_action({
+                    apply = true,
+                    filter = function(action)
+                        return action.title and action.title:match("Define in source file")
+                    end,
+                })
+            end, { buffer = buf, desc = "Implement function in source file" })
+            map("n", "<leader>lI", function()
+                vim.lsp.buf.code_action({
+                    apply = true,
+                    filter = function(action)
+                        return action.title and action.title:match("Move function body to declaration")
+                    end,
+                })
+            end, { buffer = buf, desc = "Implement function inline at declaration" })
         end
     end,
 })
