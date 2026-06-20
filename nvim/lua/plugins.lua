@@ -32,6 +32,7 @@ vim.pack.add({
     'https://github.com/saadparwaiz1/cmp_luasnip',
     'https://github.com/rafamadriz/friendly-snippets',
     'https://github.com/sindrets/diffview.nvim',
+    'https://github.com/NeogitOrg/neogit',
     'https://github.com/nvim-lualine/lualine.nvim',
     'https://github.com/preservim/tagbar',
     'https://github.com/glepnir/dashboard-nvim',
@@ -155,6 +156,20 @@ do
     map('<leader>gh', 'DiffviewFileHistory %',           'Git: file history')
     map('<leader>gH', 'DiffviewFileHistory',             'Git: repo history')
     map('<leader>gc', 'DiffviewClose',                   'Git: close')
+end
+
+-- neogit
+require('neogit').setup({
+    integrations = { diffview = true, telescope = true },
+})
+do
+    local map = function(lhs, cmd, desc)
+        vim.keymap.set('n', lhs, '<cmd>' .. cmd .. '<CR>', { desc = desc })
+    end
+    map('<leader>gg', 'Neogit',        'Git: status (stage here)')
+    map('<leader>gC', 'Neogit commit', 'Git: commit')
+    map('<leader>gp', 'Neogit push',   'Git: push')
+    map('<leader>gP', 'Neogit pull',   'Git: pull')
 end
 
 -- lualine
