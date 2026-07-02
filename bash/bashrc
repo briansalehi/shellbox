@@ -109,6 +109,7 @@ else
     [ -s "$NVM_DIR/bash_completion" ] && source "$NVM_DIR/bash_completion"
 fi
 
+include_path /usr/local
 include_path "$ANDROID_HOME/cmdline-tools/latest"
 include_path "$ANDROID_HOME/platform-tools"
 include_path "$HOME/.cargo"
