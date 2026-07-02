@@ -587,5 +587,5 @@ sudo dnf install gpgme-devel gnupg2-smime lua-devel compat-lua-devel notmuch-dev
 ### LLVM Configuration Flags
 
 ```sh
-cmake -G Ninja -S llvm -B build -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D LLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" -D LLVM_ENABLE_MODULES=ON -D LLVM_ENABLE_ASSERTIONS=ON
+cmake -G Ninja -S llvm -B build -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D LLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" -D LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" -D LLVM_ENABLE_ASSERTIONS=ON
 ```
