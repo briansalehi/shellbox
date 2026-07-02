@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+function latest2version() {
+    local url="${1%.git}"
+    local protocol domain owner
+
+    [ $# -eq 0 ] && echo "Usage: latest2version <repository-link>" >&2 && return 1
+
+    protocol="$(awk -F':|@' '{print $1}' <<< "$url")"
+    separators=$(grep -o '/' <<< "$url" | grep -c '/')
+
+    case "$protocol" in
+        ssh) domain="$(awk -F'/' '{print $3}' <<< "$url")" ;;
+        git) domain="$(sed -En 's/\w+@([^:]+):.*/\1/p' <<< "$url")" ;;
+        https) domain="$(awk -F'/' '{print $3}' <<< "$url")" ;;
+        # *) echo "The link should start with ssh, git, or https" >&2; return ;;
+        *) unset protocol ;;
+    esac
+
+    if [ "$protocol" != "git" ] && [ "$separators" -eq 1 ]
+    then
+        protocol="https"
+        domain="github.com"
+        owner="${url%/*}"
+        repo="${url#*/}"
+        url="${protocol}://${domain}/${owner}/${repo}"
+    elif [ "$protocol" == "ssh" ] && [ "$separators" -eq 4 ]
+    then
+        protocol="https"
+        owner="$(awk -F'/' '{print $4}' <<< "$url")"
+        repo="$(awk -F'/' '{print $5}' <<< "$url")"
+        url="${protocol}://${domain}/${owner}/${repo}"
+    elif [ "$protocol" == "git" ] && [ "$separators" -eq 1 ]
+    then
+        protocol="https"
+        owner="$(awk -F':|/' '{print $3}' <<< "$url")"
+        repo="$(awk -F'/' '{print $2}' <<< "$url")"
+        url="${protocol}://${domain}/${owner}/${repo}"
+    fi
+
+    if [ "$domain" != "github.com" ]
+    then
+        echo "only Github is currently supported" >&2
+        return 2
+    fi
+
+    curl --silent --show-error --dump-header - --output /dev/null "$url"/releases/latest | awk '/^location:/ {n = split($2, parts, "/"); print parts[n]}'
+}
