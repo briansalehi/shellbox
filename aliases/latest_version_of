@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function latest2version() {
+function latest_version_of() {
     local url="${1%.git}"
     local protocol domain owner
 
