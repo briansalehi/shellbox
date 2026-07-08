@@ -368,6 +368,9 @@ do
     map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
     map('<leader>mt', 'CMakeRunTest',             'CMake: test')
     map('<leader>mi', 'CMakeInstall',            'CMake: install')
+    map('<leader>mpc', 'CMakeSelectConfigurePreset', 'CMake: select configure preset')
+    map('<leader>mpb', 'CMakeSelectBuildPreset',     'CMake: select build preset')
+    map('<leader>mpt', 'CMakeSelectTestPreset',      'CMake: select test preset')
     map('<leader>mT', 'CMakeSelectBuildType',    'CMake: select build type')
     map('<leader>mB', 'CMakeSelectBuildTarget',  'CMake: select build target')
     map('<leader>mL', 'CMakeSelectLaunchTarget', 'CMake: select launch target')
@@ -685,6 +688,7 @@ wk.add({
     { '<leader>f', group = 'find' },
     { '<leader>e', group = 'oil' },
     { '<leader>m', group = 'cmake' },
+    { '<leader>mp', group = 'preset' },
     { '<leader>g', group = 'git' },
     { '<leader>h', group = 'harpoon' },
     { '<leader>d', group = 'debug' },
