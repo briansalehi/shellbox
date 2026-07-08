@@ -612,7 +612,9 @@ end
 vim.keymap.set('n', '<leader>cc', claude_toggle('ClaudeCode'),         { desc = 'Toggle Claude Code' })
 vim.keymap.set('n', '<leader>cC', claude_toggle('ClaudeCodeContinue'), { desc = 'Toggle Claude Code (continue)' })
 vim.keymap.set('n', '<leader>cV', claude_toggle('ClaudeCodeVerbose'),  { desc = 'Toggle Claude Code (verbose)' })
-vim.keymap.set({ 'n', 't' }, '<M-r>', '<Cmd>mode<CR>', { desc = 'Redraw screen' })
+vim.keymap.set({ 'n', 't' }, '<M-r>', function()
+  vim.cmd('mode')
+end, { desc = 'Redraw terminal' })
 
 -- harpoon
 do
