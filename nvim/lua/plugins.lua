@@ -619,6 +619,11 @@ vim.keymap.set({ 'n', 't' }, '<M-r>', function()
   vim.cmd('mode')
 end, { desc = 'Redraw terminal' })
 
+-- send Ctrl-L (redraw) straight to the terminal process, staying in insert mode
+vim.keymap.set('t', '<M-r>', function()
+    vim.fn.chansend(vim.b.terminal_job_id, '\012')  -- \012 = ^L
+end, { desc = 'Redraw terminal (send Ctrl-L)' })
+
 -- harpoon
 do
     local harpoon = require('harpoon')
