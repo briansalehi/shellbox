@@ -95,7 +95,7 @@ export PGENV_ROOT=$HOME/.local
 export PGDATA=$PGENV_ROOT/pgsql/data
 
 # Android SDK
-export JAVA_HOME="/usr/lib/jvm/jre-21-openjdk"
+export JAVA_HOME="/usr/lib/jvm/jre-25-openjdk"
 export ANDROID_HOME="/usr/local/src/android"
 export NDK_HOME="/usr/local/src/android/ndk"
 
