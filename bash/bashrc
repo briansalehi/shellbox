@@ -91,13 +91,16 @@ export LESS_TERMCAP_ue=$(tput sgr0)
 export LESS_TERMCAP_us=$(tput bold; tput setaf 2)
 
 # Postgres configs
-export PGENV_ROOT=$HOME/.local
-export PGDATA=$PGENV_ROOT/pgsql/data
+export PGENV_ROOT="$HOME/.local"
+export PGDATA="$PGENV_ROOT/pgsql/data"
 
 # Android SDK
 export JAVA_HOME="/usr/lib/jvm/jre-25-openjdk"
 export ANDROID_HOME="/usr/local/src/android"
 export NDK_HOME="/usr/local/src/android/ndk"
+
+# ESP-IDF
+export IDF_HOME="~/.local/esp-idf"
 
 # nvm (node and npm installer)
 if [ -s /usr/share/nvim/init-nvim.sh ]
