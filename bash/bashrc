@@ -100,7 +100,8 @@ export ANDROID_HOME="/usr/local/src/android"
 export NDK_HOME="/usr/local/src/android/ndk"
 
 # ESP-IDF
-export IDF_PATH="~/.local/src/esp-idf"
+export IDF_PATH="$HOME/.local/src/esp-idf"
+alias source_idf="source $IDF_PATH/export.sh"
 
 # nvm (node and npm installer)
 if [ -s /usr/share/nvim/init-nvim.sh ]
