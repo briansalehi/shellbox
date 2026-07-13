@@ -118,7 +118,7 @@ include_path "$ANDROID_HOME/platform-tools"
 include_path "$HOME/.cargo"
 include_path "$HOME/.local"
 
-command -v tmux &>/dev/null && [ -z "$TMUX" ] && [ -z "$NVIM" ] && [ -z "$TERMINAL_EMULATOR" ] && tmux
+command -v tmux &>/dev/null && [ -z "$TMUX" ] && [ -z "$NVIM" ] && [ -z "$TERMINAL_EMULATOR" ] && [ -z "$SSH_CONNECTION" ] && tmux
 
 alias poweroff="(sleep 0.5 && poweroff); kill $(pgrep tmux | xargs)"
 alias reboot="(sleep 0.5 && reboot); kill $(pgrep tmux | xargs)"
