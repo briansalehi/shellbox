@@ -363,6 +363,21 @@ do
     end, { desc = 'CMake: set launch args' })
     vim.keymap.set('n', '<leader>md', function() require('cmake-tools').debug({}) end, { desc = 'CMake: debug' })
     map('<leader>mc', 'CMakeClean',              'CMake: clean')
+    vim.keymap.set('n', '<leader>mx', function()
+        local dir = tostring(require('cmake-tools').get_build_directory())
+        if dir == nil or dir == '' then
+            vim.notify('CMake: no build directory configured', vim.log.levels.WARN)
+            return
+        end
+        if vim.fn.isdirectory(dir) == 0 then
+            vim.notify('CMake: build directory does not exist: ' .. dir, vim.log.levels.INFO)
+            return
+        end
+        if vim.fn.confirm('Remove build directory?\n' .. dir, '&Yes\n&No', 2) == 1 then
+            vim.fn.delete(dir, 'rf')
+            vim.notify('CMake: removed ' .. dir)
+        end
+    end, { desc = 'CMake: remove build dir' })
     map('<leader>mC', 'CMakeSettings',           'CMake: settings')
     map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
     map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
