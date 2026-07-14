@@ -363,7 +363,7 @@ do
     end, { desc = 'CMake: set launch args' })
     vim.keymap.set('n', '<leader>md', function() require('cmake-tools').debug({}) end, { desc = 'CMake: debug' })
     map('<leader>mc', 'CMakeClean',              'CMake: clean')
-    vim.keymap.set('n', '<leader>mx', function()
+    vim.keymap.set('n', '<leader>mw', function()
         local dir = tostring(require('cmake-tools').get_build_directory())
         if dir == nil or dir == '' then
             vim.notify('CMake: no build directory configured', vim.log.levels.WARN)
