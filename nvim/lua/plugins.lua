@@ -662,6 +662,11 @@ require("claude-code").setup({
 
     -- Output options
     verbose = "--verbose",   -- Enable verbose logging with full turn-by-turn output
+    verboseContinue = "--verbose --continue", -- Resume last conversation with verbose logging
+
+    -- Permissions
+    yolo = "--dangerously-skip-permissions", -- Run every tool without confirmation
+    yoloContinue = "--dangerously-skip-permissions --continue", -- Resume last conversation, skipping confirmation
   },
   -- Keymaps
   keymaps = {
@@ -670,7 +675,10 @@ require("claude-code").setup({
       terminal = "<leader>cc",     -- Terminal mode keymap for toggling Claude Code, false to disable
       variants = {
         continue = "<leader>cC", -- Normal mode keymap for Claude Code with continue flag
-        verbose = "<leader>cV",  -- Normal mode keymap for Claude Code with verbose flag
+        verbose = "<leader>cv",  -- Normal mode keymap for Claude Code with verbose flag
+        verboseContinue = "<leader>cV", -- Normal mode keymap for Claude Code with verbose flag, continued
+        yolo = "<leader>cy",     -- Normal mode keymap for Claude Code with skipped permissions
+        yoloContinue = "<leader>cY", -- Normal mode keymap for Claude Code with skipped permissions, continued
       },
     },
     window_navigation = true, -- Enable window navigation keymaps (<C-h/j/k/l>)
@@ -689,7 +697,10 @@ local function claude_toggle(cmd)
 end
 vim.keymap.set('n', '<leader>cc', claude_toggle('ClaudeCode'),         { desc = 'Toggle Claude Code' })
 vim.keymap.set('n', '<leader>cC', claude_toggle('ClaudeCodeContinue'), { desc = 'Toggle Claude Code (continue)' })
-vim.keymap.set('n', '<leader>cV', claude_toggle('ClaudeCodeVerbose'),  { desc = 'Toggle Claude Code (verbose)' })
+vim.keymap.set('n', '<leader>cv', claude_toggle('ClaudeCodeVerbose'),  { desc = 'Toggle Claude Code (verbose)' })
+vim.keymap.set('n', '<leader>cV', claude_toggle('ClaudeCodeVerboseContinue'), { desc = 'Toggle Claude Code (verbose, continue)' })
+vim.keymap.set('n', '<leader>cy', claude_toggle('ClaudeCodeYolo'),     { desc = 'Toggle Claude Code (skip permissions)' })
+vim.keymap.set('n', '<leader>cY', claude_toggle('ClaudeCodeYoloContinue'), { desc = 'Toggle Claude Code (skip permissions, continue)' })
 vim.keymap.set({ 'n', 't' }, '<M-r>', function()
   vim.cmd('mode')
 end, { desc = 'Redraw terminal' })
