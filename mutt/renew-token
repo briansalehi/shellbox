@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+#
+# Renew the OAuth2 token neomutt and msmtp use for the Outlook/Office365 account.
+#
+# Normally nothing needs to be done by hand: neomutt refreshes the access token
+# through imap_oauth_refresh_command and msmtp through passwordeval. This script
+# is for when that stops working, which happens when Microsoft revokes the whole
+# grant rather than just expiring the access token:
+#
+#   AADSTS50173: The provided grant has expired due to it being revoked [...]
+#   The grant was issued on '<date>' and the TokensValidFrom date [...] is '<later date>'
+#
+# That means the account password was changed or sessions were revoked, and no
+# amount of refreshing will help. A fresh interactive sign-in is required.
+#
+# Run this in a real terminal, not through a wrapper that may background it: the
+# device code is only valid for about 15 minutes and the script polls until then.
+
+helper=/usr/local/share/neomutt/oauth2/mutt_oauth2.py
+tokenfile="${MUTT_TOKENFILE:-${HOME}/.config/mutt/hsalehipour@ultratronik.de.tokens}"
+authflow=""
+force=0
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        -h|--help)
+            echo -e "Usage: $(basename "$0") [-f] [--authflow <flow>] [token file]" >&2
+            echo -e "" >&2
+            echo -e "  -f, --force       skip the refresh attempt, re-authorize immediately" >&2
+            echo -e "  --authflow <flow> devicecode | localhostauthcode | authcode" >&2
+            echo -e "                    use localhostauthcode when the tenant blocks device code" >&2
+            exit 0
+            ;;
+        -f|--force)
+            force=1
+            shift
+            ;;
+        --authflow)
+            authflow="$2"
+            shift 2
+            ;;
+        *)
+            tokenfile="$1"
+            shift
+            ;;
+    esac
+done
+
+if [ ! -x "${helper}" ]
+then
+    echo -e "mutt_oauth2.py not found at ${helper}" >&2
+    echo -e "It ships with the neomutt sources under contrib/oauth2" >&2
+    exit 1
+elif [ ! -f "${tokenfile}" ]
+then
+    echo -e "Token file ${tokenfile} does not exist" >&2
+    echo -e "Run ${helper} directly to create one from scratch" >&2
+    exit 2
+elif [ "$(stat -c '%a' "${tokenfile}")" != "600" ]
+then
+    # the helper refuses to touch a token file with looser permissions
+    echo -e "Token file ${tokenfile} must have mode 600" >&2
+    exit 3
+fi
+
+# gpg needs a tty to prompt for the passphrase when invoked from inside a pipe
+GPG_TTY="$(tty)"
+export GPG_TTY
+
+if [ ${force} -eq 0 ]
+then
+    # the access token is printed on success, so keep it off the terminal
+    if "${helper}" "${tokenfile}" > /dev/null 2> /tmp/renew-token.$$
+    then
+        echo "Token still valid, or refreshed from the stored refresh token."
+        rm -f /tmp/renew-token.$$
+        exit 0
+    fi
+
+    echo "Refresh failed:" >&2
+    cat /tmp/renew-token.$$ >&2
+    rm -f /tmp/renew-token.$$
+    echo "" >&2
+fi
+
+echo "Starting interactive authorization."
+echo "Open the URL below and enter the code within 15 minutes, then sign in with"
+echo "your current password. Polling stops on its own once the code expires."
+echo ""
+
+flags=()
+if [ -n "${authflow}" ]
+then
+    flags=(--authflow "${authflow}")
+fi
+
+# the access token is printed on success, so keep it off the terminal, and read
+# the helper's status out of PIPESTATUS rather than grep's
+"${helper}" "${tokenfile}" --verbose --authorize "${flags[@]}" \
+    | grep --line-buffered -v '^Access Token:'
+
+if [ "${PIPESTATUS[0]}" -ne 0 ]
+then
+    echo "" >&2
+    echo "Authorization failed. If the sign-in page rejected the code, the tenant" >&2
+    echo "blocks device code flow; retry with --authflow localhostauthcode" >&2
+    exit 4
+fi
+
+echo ""
+echo "Verifying endpoints:"
+"${helper}" "${tokenfile}" --verbose --test | grep -v '^Access Token:'
