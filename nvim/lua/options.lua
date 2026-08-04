@@ -61,7 +61,16 @@ local function header_range(buf)
     return s, e
 end
 
+local header_fold_group = vim.api.nvim_create_augroup("HeaderFold", { clear = true })
+
+-- reloading a buffer discards its manual folds, so let the header be folded again
+vim.api.nvim_create_autocmd("BufReadPost", {
+    group = header_fold_group,
+    callback = function() vim.w.header_folded = nil end,
+})
+
 vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = header_fold_group,
     callback = function(args)
         if vim.bo[args.buf].buftype ~= "" then return end
         -- folds are window-local, so remember per window which buffer we
