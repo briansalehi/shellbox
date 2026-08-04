@@ -28,3 +28,64 @@ opt.completeopt = "menu,noselect"
 opt.encoding = "utf-8"
 opt.fileencoding = "utf-8"
 opt.mouse = ""
+
+-- fold the leading license/copyright comment block
+local function header_range(buf)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, 100, false)
+    local s = 1
+    while lines[s] and (lines[s]:match("^%s*$") or lines[s]:match("^#!")) do
+        s = s + 1
+    end
+    if not lines[s] then return nil end
+
+    local e
+    if lines[s]:match("^%s*/%*") then                 -- /* ... */ block
+        e = s
+        while lines[e] and not lines[e]:match("%*/") do e = e + 1 end
+        if not lines[e] then return nil end
+    else
+        -- base comment marker, so /// //! and //=== banners all continue a
+        -- // header instead of ending it
+        local lead = lines[s]:match("^%s*(//)") or lines[s]:match("^%s*(#)")
+            or lines[s]:match("^%s*(%-%-)") or lines[s]:match("^%s*(;)")
+            or lines[s]:match("^%s*(%%)") or lines[s]:match('^%s*(")')
+        if not lead then return nil end
+        e = s
+        while lines[e + 1] and lines[e + 1]:match("^%s*" .. vim.pesc(lead)) do e = e + 1 end
+    end
+
+    if e - s < 1 then return nil end                  -- ignore one-liners
+    local text = table.concat(lines, "\n", s, e):lower()
+    if not text:match("copyright") and not text:match("licen[sc]e")
+        and not text:match("spdx") then return nil end
+    return s, e
+end
+
+vim.api.nvim_create_autocmd("BufWinEnter", {
+    callback = function(args)
+        if vim.bo[args.buf].buftype ~= "" then return end
+        -- folds are window-local, so remember per window which buffer we
+        -- already folded: a split gets its own fold, but reopening the
+        -- header with zo in this window sticks
+        if vim.w.header_folded == args.buf then return end
+        vim.w.header_folded = args.buf
+        local s, e = header_range(args.buf)
+        if not s then return end
+        vim.wo.foldmethod = "manual"
+        vim.wo.foldenable = true
+        vim.cmd(string.format("%d,%dfold", s, e))
+
+        -- the cursor sitting inside a freshly created fold makes something
+        -- later in startup reopen it ('foldopen'), so close it again once
+        -- everything else has run
+        local win = vim.api.nvim_get_current_win()
+        vim.schedule(function()
+            if not vim.api.nvim_win_is_valid(win) then return end
+            vim.api.nvim_win_call(win, function()
+                if vim.fn.foldlevel(s) > 0 and vim.fn.foldclosed(s) == -1 then
+                    pcall(vim.cmd, string.format("%dfoldclose", s))
+                end
+            end)
+        end)
+    end,
+})
