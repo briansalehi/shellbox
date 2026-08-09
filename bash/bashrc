@@ -101,6 +101,7 @@ export NDK_HOME="/usr/local/src/android/ndk"
 
 # ESP-IDF
 export IDF_PATH="$HOME/.local/src/esp-idf"
+export IDF_TOOLS_PATH="$HOME/.espressif"
 alias source_idf="source $IDF_PATH/export.sh"
 
 # nvm (node and npm installer)
