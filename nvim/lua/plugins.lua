@@ -399,16 +399,58 @@ do
     local map = function(lhs, cmd, desc)
         vim.keymap.set('n', lhs, '<cmd>' .. cmd .. '<CR>', { desc = desc })
     end
+
+    -- Most cmake-tools entry points report missing state politely, but a few
+    -- index the codemodel unguarded and raise a raw lua error instead. These
+    -- helpers produce the same kind of message the rest of the group gives.
+    local function project_root()
+        local cwd = require('cmake-tools').get_config().cwd
+        if cwd == nil or cwd == '' then cwd = vim.loop.cwd() end
+        return tostring(cwd)
+    end
+    local function has_project()
+        local root = project_root()
+        if vim.fn.filereadable(root .. '/CMakeLists.txt') == 0 then
+            vim.notify('CMake: no CMakeLists.txt in ' .. root, vim.log.levels.WARN)
+            return false
+        end
+        return true
+    end
+    local function is_configured()
+        if not has_project() then return false end
+        local dir = tostring(require('cmake-tools').get_build_directory())
+        if dir == '' or vim.fn.filereadable(dir .. '/CMakeCache.txt') == 0 then
+            vim.notify('CMake: not configured yet, run <leader>mg first', vim.log.levels.WARN)
+            return false
+        end
+        return true
+    end
+
     map('<leader>mg', 'CMakeGenerate',           'CMake: configure')
     map('<leader>mb', 'CMakeBuild',              'CMake: build target')
-    map('<leader>mf', 'CMakeBuildCurrentFile',   'CMake: build targets using this file')
+    vim.keymap.set('n', '<leader>mf', function()
+        -- build_current_file indexes the codemodel, which only exists post-configure
+        if not is_configured() then return end
+        require('cmake-tools').build_current_file({ fargs = {} })
+    end, { desc = 'CMake: build targets using this file' })
     map('<leader>mr', 'CMakeRun',                'CMake: run')
     vim.keymap.set('n', '<leader>mR', function()
         vim.ui.input({ prompt = 'Launch args args: ' }, function(args)
             if args then vim.cmd('CMakeLaunchArgs ' .. args) end
         end)
     end, { desc = 'CMake: set launch args' })
-    vim.keymap.set('n', '<leader>md', function() require('cmake-tools').debug({}) end, { desc = 'CMake: debug' })
+    vim.keymap.set('n', '<leader>md', function()
+        local cmake = require('cmake-tools')
+        if not is_configured() then return end
+        -- on a non-debuggable build type cmake-tools reprompts for one and calls
+        -- itself again regardless of the answer, so cancelling loops forever
+        if not cmake.get_config():validate_for_debugging():is_ok() then
+            vim.notify('CMake: build type ' .. tostring(cmake.get_build_type()) ..
+                ' has no debug info, pick one with <leader>mT', vim.log.levels.WARN)
+            return
+        end
+        cmake.debug({})
+    end, { desc = 'CMake: debug' })
     map('<leader>mC', 'CMakeClean',              'CMake: clean')
     vim.keymap.set('n', '<leader>mw', function()
         local dir = tostring(require('cmake-tools').get_build_directory())
@@ -472,9 +514,13 @@ do
             { '--test-dir', dir, '--rerun-failed', '--output-on-failure' },
             cfg.cwd, cfg.runner, nil)
     end, { desc = 'CMake: rerun failed tests' })
-    map('<leader>mi', 'CMakeInstall',            'CMake: install')
+    vim.keymap.set('n', '<leader>mi', function()
+        if not is_configured() then return end
+        require('cmake-tools').install({ fargs = {} }, nil)
+    end, { desc = 'CMake: install' })
     local install_prefix = nil
     vim.keymap.set('n', '<leader>mI', function()
+        if not is_configured() then return end
         vim.ui.input(
             { prompt = 'Install prefix: ', default = install_prefix or vim.fn.expand('~/.local'), completion = 'dir' },
             function(prefix)
