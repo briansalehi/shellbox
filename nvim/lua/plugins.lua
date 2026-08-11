@@ -206,7 +206,7 @@ local osys = require("cmake-tools.osys")
 require("cmake-tools").setup {
   cmake_command = "cmake", -- this is used to specify cmake command path
   ctest_command = "ctest", -- this is used to specify ctest command path
-  ctest_show_labels = false, -- also show labels in the test picker
+  ctest_show_labels = true, -- also show labels in the test picker
   cmake_use_preset = true,
   cmake_regenerate_on_save = true, -- auto generate when save CMakeLists.txt
   cmake_generate_options = { }, -- this will be passed when invoke `CMakeGenerate`
@@ -409,7 +409,7 @@ do
         end)
     end, { desc = 'CMake: set launch args' })
     vim.keymap.set('n', '<leader>md', function() require('cmake-tools').debug({}) end, { desc = 'CMake: debug' })
-    map('<leader>mc', 'CMakeClean',              'CMake: clean')
+    map('<leader>mC', 'CMakeClean',              'CMake: clean')
     vim.keymap.set('n', '<leader>mw', function()
         local dir = tostring(require('cmake-tools').get_build_directory())
         if dir == nil or dir == '' then
@@ -446,11 +446,43 @@ do
                 end)
             end)
     end, { desc = 'CMake: select generator + build type + configure' })
-    map('<leader>mC', 'CMakeSettings',           'CMake: settings')
+    map('<leader>mc', 'CMakeSettings',           'CMake: settings')
     map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
     map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
-    map('<leader>mt', 'CMakeRunTest',             'CMake: test')
+    vim.keymap.set('n', '<leader>mt', function()
+        -- plain ctest says only "N tests failed"; show what actually broke
+        require('cmake-tools').run_test({ fargs = {}, args = '--output-on-failure' })
+    end, { desc = 'CMake: test' })
+    vim.keymap.set('n', '<leader>me', function()
+        local cmake = require('cmake-tools')
+        local dir = tostring(cmake.get_build_directory())
+        if dir == '' or vim.fn.isdirectory(dir) == 0 then
+            vim.notify('CTest: no build directory', vim.log.levels.WARN)
+            return
+        end
+        -- --rerun-failed reads LastTestsFailed.log, written by the previous run
+        if vim.fn.filereadable(dir .. '/Testing/Temporary/LastTestsFailed.log') == 0 then
+            vim.notify('CTest: no failed tests recorded yet', vim.log.levels.INFO)
+            return
+        end
+        local cfg = cmake.get_config()
+        require('cmake-tools.utils').run(
+            'ctest', cfg.env_script,
+            require('cmake-tools.environment').get_build_environment(cfg),
+            { '--test-dir', dir, '--rerun-failed', '--output-on-failure' },
+            cfg.cwd, cfg.runner, nil)
+    end, { desc = 'CMake: rerun failed tests' })
     map('<leader>mi', 'CMakeInstall',            'CMake: install')
+    local install_prefix = nil
+    vim.keymap.set('n', '<leader>mI', function()
+        vim.ui.input(
+            { prompt = 'Install prefix: ', default = install_prefix or vim.fn.expand('~/.local'), completion = 'dir' },
+            function(prefix)
+                if not prefix or prefix == '' then return end
+                install_prefix = prefix
+                require('cmake-tools').install({ fargs = { '--prefix', vim.fn.expand(prefix) } }, nil)
+            end)
+    end, { desc = 'CMake: install to prefix' })
     map('<leader>mpc', 'CMakeSelectConfigurePreset', 'CMake: select configure preset')
     map('<leader>mpb', 'CMakeSelectBuildPreset',     'CMake: select build preset')
     map('<leader>mpt', 'CMakeSelectTestPreset',      'CMake: select test preset')
