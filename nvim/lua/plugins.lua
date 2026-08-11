@@ -429,15 +429,23 @@ do
         require('cmake-tools').quick_build({ fargs = { 'flash' } })
     end, { desc = 'CMake: flash (idf flash target)' })
     vim.keymap.set('n', '<leader>mG', function()
+        local cmake = require('cmake-tools')
         vim.ui.select({ 'Ninja', 'Unix Makefiles', 'Ninja Multi-Config' },
             { prompt = 'CMake generator:' }, function(gen)
                 if not gen then return end
-                -- generator can't change on an existing build dir; wipe it first
-                local dir = tostring(require('cmake-tools').get_build_directory())
-                if vim.fn.isdirectory(dir) == 1 then vim.fn.delete(dir, 'rf') end
-                require('cmake-tools').generate({ fargs = { '-G', gen } }, nil)
+                -- ask for the build type too, so configuring doesn't run with
+                -- an unintended default and have to be redone
+                vim.schedule(function()
+                    cmake.select_build_type(function(result)
+                        if not result:is_ok() then return end
+                        -- generator can't change on an existing build dir; wipe it first
+                        local dir = tostring(cmake.get_build_directory())
+                        if vim.fn.isdirectory(dir) == 1 then vim.fn.delete(dir, 'rf') end
+                        cmake.generate({ fargs = { '-G', gen } }, nil)
+                    end)
+                end)
             end)
-    end, { desc = 'CMake: select generator + configure' })
+    end, { desc = 'CMake: select generator + build type + configure' })
     map('<leader>mC', 'CMakeSettings',           'CMake: settings')
     map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
     map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
