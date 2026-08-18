@@ -5,6 +5,13 @@ require('oil').setup({
 vim.keymap.set('n', '<leader>e', '<cmd>Oil<CR>', { desc = 'Explorer: open directory' })
 vim.keymap.set('n', '-',         '<cmd>Oil<CR>', { desc = 'Explorer: open directory' })
 
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'oil',
+    callback = function(args)
+        vim.keymap.set('n', '<leader>ea', function() require('oil').save() end, { buffer = args.buf, desc = 'Explorer: apply changes' })
+    end,
+})
+
 -- harpoon
 local harpoon = require('harpoon')
 harpoon:setup()

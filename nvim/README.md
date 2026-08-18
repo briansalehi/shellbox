@@ -68,7 +68,7 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `telescope.nvim` + `telescope-fzf-native` | Fuzzy picker. `\ff` files, `\fg` grep, `\fb` buffers, `\fk` keymaps |
 | `harpoon` (v2) | Pin 4 files, jump with `\1`–`\4`. Faster than a picker for the files in flight |
 | `flash.nvim` | Jump anywhere on screen by typing a label (`\s`), or select treesitter nodes (`\S`) |
-| `oil.nvim` | File manager as an editable buffer (`-` or `\e`) — rename/delete by editing lines |
+| `oil.nvim` | File manager as an editable buffer (`-` or `\e`) — rename/delete by editing lines, `\ea` applies changes |
 | `vim-lastplace` | Restores cursor to where the file was left |
 | `auto-session` | Per-directory session save/restore (skips `~` and `/`) |
 | `undotree` | Visual undo history, `\U` |
