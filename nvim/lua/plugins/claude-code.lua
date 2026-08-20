@@ -109,16 +109,14 @@ local function claude_with_model(extra_args)
 
     local models = vim.tbl_map(function(f) return vim.fn.fnamemodify(f, ':t:r') end, files)
 
-    vim.ui.select(models, { prompt = 'Claude model:' }, function(model, index)
-      if not model then return end
-
+    local function launch(model, file)
       local claude = require('claude-code')
       local base = claude.config.command
 
       -- config.command is only read when a new terminal is spawned, so swap it
       -- for the duration of the toggle the way command_variants does internally
       local argv = { base, '--model', model,
-                     '--append-system-prompt-file', vim.fn.shellescape(files[index]) }
+                     '--append-system-prompt-file', vim.fn.shellescape(file) }
       if extra_args then table.insert(argv, extra_args) end
       claude.config.command = table.concat(argv, ' ')
 
@@ -129,6 +127,17 @@ local function claude_with_model(extra_args)
         return
       end
       enter_insert()
+    end
+
+    -- a single prompt file leaves nothing to choose, so skip the picker
+    if #models == 1 then
+      launch(models[1], files[1])
+      return
+    end
+
+    vim.ui.select(models, { prompt = 'Claude model:' }, function(model, index)
+      if not model then return end
+      launch(model, files[index])
     end)
   end
 end
