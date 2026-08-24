@@ -51,15 +51,19 @@ up any new file in those directories automatically. A new `service` must ship a 
   `lsp`. Plugins use Neovim's **native package manager** (`nvim/nvim-pack-lock.json`, plugins under
   `~/.local/share/nvim/site/pack/…`), **not** lazy.nvim/packer. `lua/plugins/init.lua` holds the
   single `vim.pack.add({…})` list and then `require`s one module per topic from `lua/plugins/`
-  (`cmake`, `dap`, `git`, `telescope`, `claude-code`, …); add a plugin by appending to the list and
+  (`cmake`, `dap`, `git`, `telescope`, `agents`, …); add a plugin by appending to the list and
   putting its setup in the matching module. Load order there matters in one place: `plugins.cmake`
   must come before `plugins.dap`. `lua/plugins/util.lua` holds the shared `cmd_map`/`fn_map` keymap
   helpers. ESP-IDF helpers (`:IdfActivate`, `:IdfSetPort`) live in `lua/plugins/esp-idf.lua`.
   Leader key is `\`. **Whenever a plugin is added to or removed from `vim.pack.add({…})`, update
   the `## Plugins` section of `nvim/README.md` in the same change**: add/remove its row in the
-  matching category table (core, appearance, navigation, editing, C/C++, git, AI), keep the plugin
+  matching category table (core, appearance, navigation, editing, C/C++, git), keep the plugin
   count in that section's intro line correct, and note the plugin's leader keymaps or that it has
   no config. Do the same when an existing plugin's keymaps change.
+  One feature is deliberately **not** a plugin: `lua/agents.lua` runs coding agents (claude,
+  opencode, …) as `jobstart(argv, { term = true })` terminals keyed by (agent, git root), so
+  several run in parallel in one repo. Its agent table and keymaps live in
+  `lua/plugins/agents.lua`, and it is documented under `## Agents` in `nvim/README.md`.
 - **`mutt/`, `msmtp/`** — neomutt + msmtp mail config (build/config flags for neomutt are in the
   README). Note `~/.config/mutt` may point at a sibling `shellbox-work` repo, not this one.
 

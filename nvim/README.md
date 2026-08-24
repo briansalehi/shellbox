@@ -41,7 +41,7 @@ sudo cmake --install neovim/build
 
 ## Plugins
 
-41 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+40 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 ### Core / libraries
@@ -105,8 +105,27 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `neogit` | Magit-style git UI, `\gg` |
 | `diffview.nvim` | Side-by-side diffs and file history, `\gd` / `\gh` |
 
-### AI
+## Agents
 
-| Plugin | Purpose |
+Coding agents are not a plugin. `lua/agents.lua` runs them as plain
+`jobstart(argv, { term = true })` terminals in a 33% bottom split, keyed by
+**(agent, git root)** so several agents stay alive side by side in the same
+repository. `lua/plugins/agents.lua` holds the agent table and the keymaps; adding
+one is a new entry plus a `map(...)` line.
+
+| Keymap | Action |
 | --- | --- |
-| `claude-code.nvim` | Claude Code in a 30% bottom split, plus a per-model system-prompt picker (`\cs`, reading `~/.config/models/*.md`) and an `<M-r>` redraw fix |
+| `\cc` | claude (`\cC` continue, `\cv` / `\cV` verbose, `\cy` / `\cY` skip permissions) |
+| `\co` / `\cO` | opencode, plain / continue last session |
+| `\ca` | pick or focus a running agent |
+| `\cs` / `\cS` | system-prompt picker, scoped to the agent being launched |
+| `<M-r>` | redraw the terminal (`<C-l>` is not free: `<C-h/j/k/l>` leave the window) |
+
+Each agent may declare a `prompts` block naming its prompt directory and the flags
+to build from a pick. Claude reads `~/.config/models/*.md` and passes
+`--model <name> --append-system-prompt-file <path>`; an agent without the block
+says so instead of borrowing another agent's flags.
+
+Opening or toggling an agent lands in insert mode, but nothing re-enters insert on
+`WinEnter`, so leaving with `<C-\><C-n>` and switching windows keeps the scrollback
+position.

@@ -49,7 +49,6 @@ vim.pack.add({
     'https://github.com/mfussenegger/nvim-dap',
     'https://github.com/rcarriga/nvim-dap-ui',
     'https://github.com/nvim-neotest/nvim-nio',
-    'https://github.com/greggh/claude-code.nvim',
     'https://github.com/folke/flash.nvim',
     'https://github.com/folke/trouble.nvim',
     'https://github.com/nvim-mini/mini.ai',
@@ -73,4 +72,4 @@ require('plugins.format')
 require('plugins.navigation')
 require('plugins.diagnostics')
 require('plugins.editor')
-require('plugins.claude-code')
+require('plugins.agents')

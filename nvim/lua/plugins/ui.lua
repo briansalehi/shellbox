@@ -40,7 +40,7 @@ wk.add({
     { '<leader>d', group = 'debug' },
     { '<leader>l', group = 'lsp' },
     { '<leader>u', group = 'format' },
-    { '<leader>c', group = 'claude' },
+    { '<leader>c', group = 'agents' },
     { '<leader>r', group = 'refactor' },
     { '<leader>x', group = 'trouble' },
     { '<leader>q', group = 'quickfix' },
