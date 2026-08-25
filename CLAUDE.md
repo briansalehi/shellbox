@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Overview
 
 Shellbox is a personal dotfiles + shell-utilities repo (Fedora-oriented, but scripts detect
-distro/OS at runtime). It has **two independent deployment mechanisms** — knowing which one a
-given directory uses is the key to working here:
+distro/OS at runtime). It has **three deployment mechanisms** — knowing which one a given
+directory uses is the key to working here:
 
 1. **`make`-installed** (`scripts/`, `aliases/`, `services/` + `systemd/`) — copied into place.
 2. **Symlink-deployed** (`bash/`, `nvim/`, `tmux/`, `mutt/`, `msmtp/`, `ssh/`, `llvm/`) — the
@@ -14,18 +14,23 @@ given directory uses is the key to working here:
    the live config directly**. E.g. `~/.bashrc → bash/bashrc`, `~/.config/nvim → nvim/`,
    `~/.tmux.conf → tmux/tmux.conf`. There is no install step for these; changes take effect on
    next shell/app start.
+3. **`skills/`** — both: `make <skill>` symlinks `skills/<name>` to
+   `~/.claude/skills/<name>`, and after that one-time step edits here are live. Deployed with a
+   symlink rather than a copy on purpose, so a skill can be edited while it is in use.
 
 ## Commands
 
 - `make` (or `make help`) — list all installable targets (generated dynamically from the
-  contents of `scripts/`, `aliases/`, `services/`).
-- `make all` — install every script + alias.
-- `make <name>` — install a single script/alias/service by filename (e.g. `make clip`,
-  `make task`, `make ninja-maintenance`).
+  contents of `scripts/`, `aliases/`, `services/`, `skills/`).
+- `make all` — install every script, alias, service and skill.
+- `make <name>` — install a single script/alias/service by filename, or a skill by directory
+  name (e.g. `make clip`, `make task`, `make ninja-maintenance`, `make speedport`).
+- `make skills` — install every skill.
 - `make test` — **the only lint/test**: runs `shellcheck` over `scripts/*`, `aliases/*`,
   `services/*`. Run this after editing any shell file.
 
-Install destinations: scripts → `/usr/local/bin`; aliases → `~/.bash_tools/` (sourced by a
+Install destinations: skills → symlinked into `~/.claude/skills/`; scripts → `/usr/local/bin`;
+aliases → `~/.bash_tools/` (sourced by a
 `for tool in ~/.bash_tools/*; do source $tool; done` loop in `bashrc`); services → `/usr/local/bin`
 plus their paired `systemd/<name>.service` + `.timer` → `/usr/lib/systemd/system/`.
 
@@ -64,6 +69,13 @@ up any new file in those directories automatically. A new `service` must ship a 
   opencode, …) as `jobstart(argv, { term = true })` terminals keyed by (agent, git root), so
   several run in parallel in one repo. Its agent table and keymaps live in
   `lua/plugins/agents.lua`, and it is documented under `## Agents` in `nvim/README.md`.
+- **`skills/`** — Claude Code skills, one directory per skill, each holding a `SKILL.md` (with
+  YAML frontmatter carrying `name` and `description`) plus whatever `scripts/` it needs. A new
+  skill needs **no Makefile edit** — the wildcard picks up any new subdirectory. `SKILL.md` is a
+  skill's documentation; do not add a separate README. `make test` does not cover this tree.
+  Current skills: `speedport` (read-only client for the Telekom Speedport router's web UI plus
+  the local WiFi diagnostics that go with it — the script is deliberately read-only, do not add
+  settings writes to it).
 - **`mutt/`, `msmtp/`** — neomutt + msmtp mail config (build/config flags for neomutt are in the
   README). Note `~/.config/mutt` may point at a sibling `shellbox-work` repo, not this one.
 

@@ -1,8 +1,9 @@
-.PHONY: help all remove test scripts aliases services script_notice service_notice
+.PHONY: help all remove test scripts aliases services skills script_notice service_notice skill_notice
 
 scripts := $(subst scripts/,,$(wildcard scripts/*))
 aliases := $(subst aliases/,,$(wildcard aliases/*))
 services := $(subst services/,,$(wildcard services/*))
+skills := $(subst skills/,,$(wildcard skills/*))
 
 help:
 	@tput setaf 2
@@ -10,7 +11,7 @@ help:
 	@echo "Available targets:"
 	@echo
 	@tput setaf 3
-	@echo all $(scripts) $(aliases) $(services) | tr ' ' '\n' | nl | tr -s ' ' | tr '\t' ' ' | column
+	@echo all $(scripts) $(aliases) $(services) $(skills) | tr ' ' '\n' | nl | tr -s ' ' | tr '\t' ' ' | column
 	@tput sgr0
 	@echo
 	@tput setaf 6
@@ -19,7 +20,7 @@ help:
 	@tput sgr0
 	@echo
 
-all: $(scripts) $(aliases) $(services) script_notice alias_notice
+all: $(scripts) $(aliases) $(services) $(skills) script_notice alias_notice
 
 $(scripts): script_notice
 	mkdir --parents /usr/local/bin
@@ -35,6 +36,13 @@ $(services): service_notice
 $(aliases): alias_notice
 	mkdir --parents $(HOME)/.bash_tools
 	cp aliases/$@ $(HOME)/.bash_tools
+
+skills: $(skills)
+
+# symlinked, not copied: a skill is edited in place while it is in use
+$(skills): skill_notice
+	mkdir --parents $(HOME)/.claude/skills
+	ln --symbolic --force --no-dereference $(CURDIR)/skills/$@ $(HOME)/.claude/skills/$@
 
 script_notice:
 	@tput setaf 3
@@ -53,6 +61,17 @@ alias_notice:
 	@echo
 	@tput setaf 6
 	@echo 'for tool in ~/.bash_tools/*; do source $$tool; done'
+	@tput sgr0
+	@echo
+
+skill_notice:
+	@tput setaf 3
+	@tput bold
+	@echo 'Skills are symlinked into `~/.claude/skills`, so edits here are live.'
+	@echo 'List them from a session with:'
+	@echo
+	@tput setaf 6
+	@echo '/skills'
 	@tput sgr0
 	@echo
 
