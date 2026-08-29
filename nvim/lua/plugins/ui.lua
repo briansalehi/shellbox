@@ -35,6 +35,7 @@ wk.add({
     { '<leader>e', group = 'oil' },
     { '<leader>m', group = 'cmake' },
     { '<leader>mp', group = 'preset' },
+    { '<leader>mt', group = 'ctest' },
     { '<leader>g', group = 'git' },
     { '<leader>h', group = 'harpoon' },
     { '<leader>d', group = 'debug' },

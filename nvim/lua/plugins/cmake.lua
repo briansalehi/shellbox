@@ -238,29 +238,100 @@ end, { desc = 'CMake: select generator + build type + configure' })
 map('<leader>mc', 'CMakeSettings',           'CMake: settings')
 map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
 map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
-vim.keymap.set('n', '<leader>mt', function()
-    -- plain ctest says only "N tests failed"; show what actually broke
-    require('cmake-tools').run_test({ fargs = {}, args = '--output-on-failure' })
-end, { desc = 'CMake: test' })
-vim.keymap.set('n', '<leader>me', function()
-    local cmake = require('cmake-tools')
-    local dir = tostring(cmake.get_build_directory())
+-- ctest lives under <leader>mt. cmake-tools' run_test drives a picker and
+-- forwards only a single extra argument, so the direct runs below go through
+-- utils.run themselves.
+local function ctest_build_dir()
+    local dir = tostring(require('cmake-tools').get_build_directory())
     if dir == '' or vim.fn.isdirectory(dir) == 0 then
         vim.notify('CTest: no build directory', vim.log.levels.WARN)
-        return
+        return nil
     end
+    return dir
+end
+local function ctest_run(dir, args)
+    local cmake = require('cmake-tools')
+    local cfg = cmake.get_config()
+    -- a test preset picked with <leader>mpt names its own test dir
+    local preset = cmake.get_test_preset()
+    local argv = preset and { '--preset', preset } or { '--test-dir', dir }
+    require('cmake-tools.utils').run(
+        'ctest', cfg.env_script,
+        require('cmake-tools.environment').get_build_environment(cfg),
+        vim.list_extend(argv, args),
+        cfg.cwd, cfg.runner, nil)
+end
+
+vim.keymap.set('n', '<leader>mta', function()
+    local dir = ctest_build_dir()
+    if dir == nil then return end
+    -- plain ctest says only "N tests failed"; show what actually broke
+    ctest_run(dir, { '--output-on-failure' })
+end, { desc = 'CTest: run all tests' })
+vim.keymap.set('n', '<leader>mtb', function()
+    -- ctest never builds, so on its own it happily tests a stale binary after
+    -- a source edit; the build directory check waits until after the build,
+    -- which creates and configures that directory when it is missing
+    require('cmake-tools').build({ fargs = {} }, function(result)
+        if not result:is_ok() then return end
+        vim.schedule(function()
+            local dir = ctest_build_dir()
+            if dir == nil then return end
+            ctest_run(dir, { '--output-on-failure' })
+        end)
+    end)
+end, { desc = 'CTest: build then run all tests' })
+vim.keymap.set('n', '<leader>mts', function()
+    require('cmake-tools').run_test({ fargs = {}, args = '--output-on-failure' })
+end, { desc = 'CTest: pick test or label to run' })
+vim.keymap.set('n', '<leader>mtr', function()
+    local dir = ctest_build_dir()
+    if dir == nil then return end
+    vim.ui.input({ prompt = 'CTest name regex: ' }, function(pattern)
+        if not pattern or pattern == '' then return end
+        ctest_run(dir, { '-R', pattern, '--output-on-failure' })
+    end)
+end, { desc = 'CTest: run tests matching regex' })
+vim.keymap.set('n', '<leader>mtu', function()
+    local dir = ctest_build_dir()
+    if dir == nil then return end
+    -- flaky hunts target one test, so reuse whatever <leader>mts picked last;
+    -- that field also holds the picker's "all" and "[label] ..." rows, which
+    -- are not test names and cannot be passed to -R
+    local target = require('cmake-tools').get_config().selected_test
+    if target == 'all' or (target and target:match('^%[label%]')) then
+        target = nil
+    end
+    vim.ui.input(
+        { prompt = 'Repeat ' .. (target or 'all tests') .. ' until fail, runs: ', default = '10' },
+        function(count)
+            if not count or not count:match('^%d+$') then return end
+            local args = { '--repeat', 'until-fail:' .. count, '--output-on-failure' }
+            if target then vim.list_extend(args, { '-R', target }) end
+            ctest_run(dir, args)
+        end)
+end, { desc = 'CTest: repeat until fail' })
+vim.keymap.set('n', '<leader>mtf', function()
+    local dir = ctest_build_dir()
+    if dir == nil then return end
     -- --rerun-failed reads LastTestsFailed.log, written by the previous run
     if vim.fn.filereadable(dir .. '/Testing/Temporary/LastTestsFailed.log') == 0 then
         vim.notify('CTest: no failed tests recorded yet', vim.log.levels.INFO)
         return
     end
-    local cfg = cmake.get_config()
-    require('cmake-tools.utils').run(
-        'ctest', cfg.env_script,
-        require('cmake-tools.environment').get_build_environment(cfg),
-        { '--test-dir', dir, '--rerun-failed', '--output-on-failure' },
-        cfg.cwd, cfg.runner, nil)
-end, { desc = 'CMake: rerun failed tests' })
+    ctest_run(dir, { '--rerun-failed', '--output-on-failure' })
+end, { desc = 'CTest: rerun failed tests' })
+vim.keymap.set('n', '<leader>mtl', function()
+    local dir = ctest_build_dir()
+    if dir == nil then return end
+    -- ctest overwrites this on every run, so it is the last run's full output
+    local log = dir .. '/Testing/Temporary/LastTest.log'
+    if vim.fn.filereadable(log) == 0 then
+        vim.notify('CTest: no test log at ' .. log, vim.log.levels.INFO)
+        return
+    end
+    vim.cmd('edit ' .. vim.fn.fnameescape(log))
+end, { desc = 'CTest: open last test log' })
 vim.keymap.set('n', '<leader>mi', function()
     if not is_configured() then return end
     require('cmake-tools').install({ fargs = {} }, nil)
