@@ -291,19 +291,53 @@ local function browse_cache(advanced)
     local pending = {}
     local function value_of(e) return pending[e.name] or e.value end
 
+    -- Edits land in base_settings.generate_options, not in a one-shot argument
+    -- list, so <leader>mc shows them, they survive a wiped build directory and
+    -- cmake-tools writes them to its session file on exit.
+    -- An option is written either as one argument, -DNAME:TYPE=value, or as the
+    -- "-D", "NAME:TYPE=value" pair; cmake takes both and they name the same cache
+    -- entry, so a rewrite has to find either and keep the form it found.
+    local function find_option(options, name)
+        for i, opt in ipairs(options) do
+            if opt == '-D' then
+                local value = options[i + 1]
+                if value and value:match('^([^:=]+)') == name then return i + 1, true end
+            elseif opt:match('^%-D([^:=]+)') == name then
+                return i, false
+            end
+        end
+    end
+
+    local function store(options, name, value)
+        local index, split = find_option(options, name)
+        if index then
+            options[index] = split and value or ('-D' .. value)
+            return
+        end
+        table.insert(options, '-D')
+        table.insert(options, value)
+    end
+
     local function apply()
-        local args, changed = {}, {}
+        local flags, changed = {}, {}
         for _, e in ipairs(entries) do
             if pending[e.name] then
-                table.insert(args, ('-D%s:%s=%s'):format(e.name, e.kind, pending[e.name]))
+                table.insert(flags,
+                    { name = e.name, value = ('%s:%s=%s'):format(e.name, e.kind, pending[e.name]) })
                 table.insert(changed, ('  %s = %s'):format(e.name, pending[e.name]))
             end
         end
-        if #args == 0 then return end
-        if vim.fn.confirm('Reconfigure with:\n' .. table.concat(changed, '\n'),
-            '&Yes\n&No', 1) == 1 then
-            require('cmake-tools').generate({ fargs = args }, nil)
+        if #flags == 0 then return end
+        -- nothing is stored until this is answered, so declining leaves the
+        -- settings exactly as they were
+        if vim.fn.confirm('Store in CMake settings and reconfigure:\n' ..
+            table.concat(changed, '\n'), '&Yes\n&No', 1) ~= 1 then
+            return
         end
+        local settings = require('cmake-tools').get_config().base_settings
+        settings.generate_options = settings.generate_options or {}
+        for _, f in ipairs(flags) do store(settings.generate_options, f.name, f.value) end
+        require('cmake-tools').generate({ fargs = {} }, nil)
     end
 
     local function pick()
