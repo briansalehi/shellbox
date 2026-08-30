@@ -236,6 +236,112 @@ vim.keymap.set('n', '<leader>mG', function()
         end)
 end, { desc = 'CMake: select generator + build type + configure' })
 map('<leader>mc', 'CMakeSettings',           'CMake: settings')
+
+-- CMakeSettings above edits cmake-tools' own settings; the project's cache is a
+-- separate thing and nothing in the plugin lists it. `cmake -LH` is that listing,
+-- -N keeps it from reconfiguring behind your back, and the help text for each
+-- entry arrives as the `//` lines above it.
+local function cache_entries(advanced)
+    local dir = tostring(require('cmake-tools').get_build_directory())
+    local lines = vim.fn.systemlist({ 'cmake', advanced and '-LAH' or '-LH', '-N', '-B', dir })
+    if vim.v.shell_error ~= 0 then
+        vim.notify('CMake: ' .. table.concat(lines, '\n'), vim.log.levels.ERROR)
+        return {}
+    end
+    local out, help = {}, {}
+    for _, line in ipairs(lines) do
+        local comment = line:match('^//(.*)$')
+        if comment then
+            table.insert(help, vim.trim(comment))
+        else
+            local name, kind, value = line:match('^([^:]+):(%u+)=(.*)$')
+            if name then
+                table.insert(out, { name = name, kind = kind, value = value,
+                    help = table.concat(help, ' ') })
+            end
+            help = {}
+        end
+    end
+    return out
+end
+
+-- cmake's own truthiness: false is only these constants and a *-NOTFOUND
+local function cmake_true(value)
+    local v = value:upper()
+    return not (v == '' or v == '0' or v == 'OFF' or v == 'NO' or v == 'FALSE'
+        or v == 'N' or v == 'IGNORE' or v == 'NOTFOUND' or v:match('%-NOTFOUND$'))
+end
+
+local function ellipsis(text, width)
+    if #text <= width then return text end
+    return text:sub(1, width - 1) .. '\u{2026}'
+end
+
+-- A pick edits a pending set instead of reconfiguring, so flipping four options
+-- costs one configure run rather than four; closing the picker applies them.
+local function browse_cache(advanced)
+    if not is_configured() then return end
+    local entries = cache_entries(advanced)
+    if #entries == 0 then
+        vim.notify('CMake: no cache entries in ' ..
+            tostring(require('cmake-tools').get_build_directory()), vim.log.levels.WARN)
+        return
+    end
+
+    local pending = {}
+    local function value_of(e) return pending[e.name] or e.value end
+
+    local function apply()
+        local args, changed = {}, {}
+        for _, e in ipairs(entries) do
+            if pending[e.name] then
+                table.insert(args, ('-D%s:%s=%s'):format(e.name, e.kind, pending[e.name]))
+                table.insert(changed, ('  %s = %s'):format(e.name, pending[e.name]))
+            end
+        end
+        if #args == 0 then return end
+        if vim.fn.confirm('Reconfigure with:\n' .. table.concat(changed, '\n'),
+            '&Yes\n&No', 1) == 1 then
+            require('cmake-tools').generate({ fargs = args }, nil)
+        end
+    end
+
+    local function pick()
+        vim.ui.select(entries, {
+            prompt = advanced and 'CMake cache (advanced):' or 'CMake cache:',
+            format_item = function(e)
+                local value = value_of(e)
+                return ('%s %-38s %-9s %-22s %s'):format(
+                    pending[e.name] and '*' or ' ',
+                    ellipsis(e.name, 38), e.kind:lower(),
+                    ellipsis(value ~= '' and value or '<empty>', 22),
+                    ellipsis(e.help, 60))
+            end,
+        }, function(e)
+            -- cancelling is the way out, so that is where the changes are applied
+            if not e then return vim.schedule(apply) end
+            if e.kind == 'BOOL' then
+                pending[e.name] = cmake_true(value_of(e)) and 'OFF' or 'ON'
+                return vim.schedule(pick)
+            end
+            vim.ui.input({
+                prompt = e.name .. ' (' .. e.kind:lower() .. '): ',
+                default = value_of(e),
+                completion = (e.kind == 'PATH' or e.kind == 'FILEPATH') and 'file' or nil,
+            }, function(input)
+                if input then pending[e.name] = input end
+                vim.schedule(pick)
+            end)
+        end)
+    end
+
+    pick()
+end
+
+vim.keymap.set('n', '<leader>mv', function() browse_cache(false) end,
+    { desc = 'CMake: cache options' })
+vim.keymap.set('n', '<leader>mV', function() browse_cache(true) end,
+    { desc = 'CMake: cache options, including advanced' })
 map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
 map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
 -- ctest lives under <leader>mt. cmake-tools' run_test drives a picker and
