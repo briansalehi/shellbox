@@ -4,6 +4,77 @@
 local agents = require('agents')
 local map = require('plugins.util').fn_map
 
+-- Each ~/.config/models/claude/<model>.md holds the prompt to append when running
+-- <model>. The flag must be --append-system-prompt-file: --append-system-prompt
+-- takes the prompt text itself, so handing it a path appends the path as a literal
+-- string. No shellescape: jobstart gets an argv list, not a shell.
+local function claude_models()
+    local dir = vim.fn.expand('~/.config/models/claude')
+    local out = {}
+    for _, file in ipairs(vim.fn.glob(dir .. '/*.md', true, true)) do
+        local model = vim.fn.fnamemodify(file, ':t:r')
+        table.insert(out, {
+            label = model,
+            args  = { '--model', model, '--append-system-prompt-file', file },
+        })
+    end
+    return out
+end
+
+-- opencode has no system-prompt flag. Its prompts live in agent definitions at
+-- ~/.config/opencode/agent/<name>.md, whose frontmatter names the model they are
+-- written for, so a model only picks up a prompt through --agent.
+local function opencode_prompts()
+    local out = {}
+    for _, file in ipairs(vim.fn.glob(vim.fn.expand('~/.config/opencode/agent') .. '/*.md',
+        true, true)) do
+        local lines = vim.fn.readfile(file, '', 40)
+        if lines[1] and lines[1]:match('^%-%-%-%s*$') then
+            for i = 2, #lines do
+                if lines[i]:match('^%-%-%-%s*$') then break end
+                local model = lines[i]:match('^%s*model:%s*(.-)%s*$')
+                if model then
+                    model = model:gsub('^[\'"]', ''):gsub('[\'"]$', '')
+                    out[model] = vim.fn.fnamemodify(file, ':t:r')
+                    break
+                end
+            end
+        end
+    end
+    return out
+end
+
+-- `opencode models` shells out for a bit over a second, so the list is read once
+-- per nvim session; a failed run is not cached.
+local model_cache = nil
+
+local function opencode_models()
+    if not model_cache then
+        if vim.fn.executable('opencode') ~= 1 then return {} end
+        local lines = vim.fn.systemlist({ 'opencode', 'models' })
+        if vim.v.shell_error ~= 0 then
+            vim.notify('agents: `opencode models` failed', vim.log.levels.ERROR)
+            return {}
+        end
+        model_cache = lines
+    end
+
+    local prompts = opencode_prompts()
+    local out = {}
+    for _, line in ipairs(model_cache) do
+        local model = vim.trim(line)
+        if model ~= '' then
+            local prompt = prompts[model]
+            table.insert(out, {
+                label = prompt and ('%s  [%s]'):format(model, prompt) or model,
+                args  = prompt and { '--model', model, '--agent', prompt }
+                                or { '--model', model },
+            })
+        end
+    end
+    return out
+end
+
 agents.setup({
     window = { split_ratio = 0.33 },
     agents = {
@@ -18,16 +89,7 @@ agents.setup({
                 yolo            = { '--dangerously-skip-permissions' },
                 yoloContinue    = { '--dangerously-skip-permissions', '--continue' },
             },
-            -- Each ~/.config/models/<model>.md holds the prompt to append when running
-            -- <model>. The flag must be --append-system-prompt-file: --append-system-prompt
-            -- takes the prompt text itself, so handing it a path appends the path as a
-            -- literal string. No shellescape: jobstart gets an argv list, not a shell.
-            prompts = {
-                dir = '~/.config/models',
-                args = function(model, file)
-                    return { '--model', model, '--append-system-prompt-file', file }
-                end,
-            },
+            models = claude_models,
         },
         {
             name = 'opencode',
@@ -36,9 +98,7 @@ agents.setup({
                 continue = { '--continue' },
                 fork     = { '--continue', '--fork' },
             },
-            -- no prompts block: opencode takes system prompts through AGENTS.md and
-            -- agent definitions, not a flag, so \cs says so rather than passing
-            -- claude's --append-system-prompt-file
+            models = opencode_models,
         },
     },
 })
@@ -47,19 +107,24 @@ local function toggle(name, variant)
     return function() agents.toggle(name, { variant = variant }) end
 end
 
-map('<leader>cc', toggle('claude'),                    'Agent: claude')
-map('<leader>cC', toggle('claude', 'continue'),        'Agent: claude (continue)')
+local function pick_model(name, variant)
+    return function() agents.pick_model(name, { variant = variant }) end
+end
+
+map('<leader>cc', pick_model('claude'),                'Agent: claude model')
+map('<leader>cC', pick_model('claude', 'continue'),    'Agent: claude model (continue)')
+-- no --model and no --append-system-prompt-file: claude's own default model, and
+-- /model inside the session to reach any other one
+map('<leader>cr', toggle('claude'),                    'Agent: claude (raw)')
+map('<leader>cR', toggle('claude', 'continue'),        'Agent: claude (raw, continue)')
 map('<leader>cv', toggle('claude', 'verbose'),         'Agent: claude (verbose)')
 map('<leader>cV', toggle('claude', 'verboseContinue'), 'Agent: claude (verbose, continue)')
 map('<leader>cy', toggle('claude', 'yolo'),            'Agent: claude (skip permissions)')
 map('<leader>cY', toggle('claude', 'yoloContinue'),    'Agent: claude (skip permissions, continue)')
+map('<leader>ca', pick_model('opencode'),              'Agent: opencode model')
 map('<leader>co', toggle('opencode'),                  'Agent: opencode')
 map('<leader>cO', toggle('opencode', 'continue'),      'Agent: opencode (continue)')
-map('<leader>ca', agents.pick,                         'Agent: pick or focus')
-map('<leader>cs', function() agents.pick_prompt({}) end,
-    'Agent: system prompt')
-map('<leader>cS', function() agents.pick_prompt({ variant = 'continue' }) end,
-    'Agent: system prompt (continue)')
+map('<leader>cp', agents.pick,                         'Agent: pick or focus')
 
 -- <C-l> is not free: <C-h/j/k/l> leave the terminal window, so redraw lives on <M-r>
 vim.keymap.set({ 'n', 't' }, '<M-r>', function()

@@ -367,44 +367,36 @@ function M.pick()
     }, function(choice) if choice then choice.run() end end)
 end
 
--- Prompts resolve through the agent, so claude's --model /
--- --append-system-prompt-file pair can never reach another binary.
-function M.pick_prompt(opts)
+-- Model pickers are per-agent: claude's --model/--append-system-prompt-file pair
+-- and opencode's --model/--agent pair are not interchangeable, so each agent
+-- carries its own model list and builds its own flags.
+function M.pick_model(name, opts)
     opts = opts or {}
-
-    local function run(agent)
-        local p = agent.prompts
-        if not p then
-            vim.notify(('agents: %s has no prompt directory configured'):format(agent.name),
-                vim.log.levels.WARN)
-            return
-        end
-        local dir   = vim.fn.expand(p.dir)
-        local files = vim.fn.glob(dir .. '/' .. (p.glob or '*.md'), true, true)
-        if #files == 0 then
-            vim.notify(('agents: no prompts in %s'):format(dir), vim.log.levels.WARN)
-            return
-        end
-        local names = vim.tbl_map(function(f) return vim.fn.fnamemodify(f, ':t:r') end, files)
-
-        local function go(i)
-            -- argv list: the path goes through verbatim, escaping it would pass
-            -- literal quotes to the agent
-            M.focus(agent.name, { variant = opts.variant, args = p.args(names[i], files[i]) })
-        end
-
-        if #files == 1 then return go(1) end
-        vim.ui.select(names, { prompt = agent.name .. ' prompt:' },
-            function(_, i) if i then go(i) end end)
-    end
-
-    if #M.order == 0 then
-        vim.notify('agents: no agents configured', vim.log.levels.WARN)
+    local agent = agent_or_warn(name)
+    if not agent then return end
+    if not agent.models then
+        vim.notify(('agents: %s has no model list configured'):format(agent.name),
+            vim.log.levels.WARN)
         return
     end
-    if #M.order == 1 then return run(M.agents[M.order[1]]) end
-    vim.ui.select(M.order, { prompt = 'Agent:' },
-        function(name) if name then run(M.agents[name]) end end)
+
+    local items = agent.models()
+    if #items == 0 then
+        vim.notify(('agents: no models found for %s'):format(agent.name), vim.log.levels.WARN)
+        return
+    end
+
+    -- argv list: paths and provider/model strings go through verbatim, escaping
+    -- them would pass literal quotes to the agent
+    local function go(item)
+        M.focus(agent.name, { variant = opts.variant, args = item.args })
+    end
+
+    if #items == 1 then return go(items[1]) end
+    vim.ui.select(items, {
+        prompt = agent.name .. ' model:',
+        format_item = function(i) return i.label end,
+    }, function(choice) if choice then go(choice) end end)
 end
 
 -- A clean exit takes the window and buffer with it; a crash keeps the buffer so the
