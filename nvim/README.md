@@ -41,7 +41,7 @@ sudo cmake --install neovim/build
 
 ## Plugins
 
-42 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+43 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 ### Core / libraries
@@ -85,6 +85,7 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `vim-illuminate` | Faintly highlights other occurrences of the symbol under the cursor. lsp (clangd) then regex — the treesitter provider needs nvim-treesitter master. `<A-n>` / `<A-p>` jump between them, `<A-i>` selects one |
 | `mini.ai` | Smarter text objects (`ci(`, `va,`) across lines and treesitter nodes |
 | `nvim-treesitter` | Syntax/indent parsing for c, cpp, lua, cmake, python, rust |
+| `nvim-treesitter-context` | Pins the enclosing function/loop to the top of the window while scrolling. Capped at 3 lines, off in windows under 20 rows. `[c` jumps to the context line (falls through to the builtin in diff mode) |
 | `conform.nvim` | Formatting via uncrustify for C/C++, `\uf` |
 | `vim-maximizer` | Zoom one split to full screen. No config |
 | `bullets.vim`, `vim-livedown` | Markdown list auto-numbering, live browser preview. No config |
