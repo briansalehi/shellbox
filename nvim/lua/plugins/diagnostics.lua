@@ -3,6 +3,15 @@ local map = require('plugins.util').cmd_map
 -- trouble.nvim
 require('trouble').setup()
 
+-- nvim-bqf - preview pane in the native quickfix window
+-- cmake_executor is the quickfix executor, so \mb drops build errors straight
+-- into this window; bqf previews each entry in place while moving through them.
+-- The `zf` fzf filter is left at its default but needs the fzf binary, which is
+-- not installed here.
+require('bqf').setup({
+    preview = { winblend = 0 },
+})
+
 map('<leader>xx', 'Trouble diagnostics toggle',              'Trouble: all diagnostics')
 map('<leader>xd', 'Trouble diagnostics toggle filter.buf=0', 'Trouble: buffer diagnostics')
 map('<leader>xq', 'Trouble qflist toggle',                   'Trouble: quickfix')

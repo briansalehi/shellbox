@@ -41,7 +41,7 @@ sudo cmake --install neovim/build
 
 ## Plugins
 
-41 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+42 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 ### Core / libraries
@@ -98,6 +98,7 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `clangd_extensions.nvim` | Inlay hints, AST view, source/header switch, type hierarchy, plus `\li` / `\lI` code actions |
 | `nvim-dap` + `nvim-dap-ui` | Debugger on `\d*`. `plugins.cmake` must load first — dap re-registers cmake-tools' debug function |
 | `trouble.nvim` | Diagnostics, references, and symbols in a navigable list (`\x*`) |
+| `nvim-bqf` | Preview pane in the native quickfix window, so `\mb` build errors and `gr` references can be read in context while scrolling the list |
 
 ### Git
 

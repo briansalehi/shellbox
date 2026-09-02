@@ -51,6 +51,7 @@ vim.pack.add({
     'https://github.com/nvim-neotest/nvim-nio',
     'https://github.com/folke/flash.nvim',
     'https://github.com/folke/trouble.nvim',
+    'https://github.com/kevinhwang91/nvim-bqf',
     'https://github.com/nvim-mini/mini.ai',
     'https://github.com/RRethy/vim-illuminate',
     'https://github.com/rmagatti/auto-session',
