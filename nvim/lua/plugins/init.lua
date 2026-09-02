@@ -52,6 +52,7 @@ vim.pack.add({
     'https://github.com/folke/flash.nvim',
     'https://github.com/folke/trouble.nvim',
     'https://github.com/nvim-mini/mini.ai',
+    'https://github.com/RRethy/vim-illuminate',
     'https://github.com/rmagatti/auto-session',
     'https://github.com/mbbill/undotree',
     { src = 'https://github.com/ThePrimeagen/harpoon', version = 'harpoon2' }

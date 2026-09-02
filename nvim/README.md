@@ -41,7 +41,7 @@ sudo cmake --install neovim/build
 
 ## Plugins
 
-40 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+41 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 ### Core / libraries
@@ -82,6 +82,7 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `LuaSnip` + `cmp_luasnip` + `friendly-snippets` | Snippet engine and community snippet pack |
 | `nvim-surround` | Add/change/delete surrounding quotes and brackets (`ys`, `cs`, `ds`) |
 | `vim-commentary` | `gc` to comment |
+| `vim-illuminate` | Faintly highlights other occurrences of the symbol under the cursor. lsp (clangd) then regex — the treesitter provider needs nvim-treesitter master. `<A-n>` / `<A-p>` jump between them, `<A-i>` selects one |
 | `mini.ai` | Smarter text objects (`ci(`, `va,`) across lines and treesitter nodes |
 | `nvim-treesitter` | Syntax/indent parsing for c, cpp, lua, cmake, python, rust |
 | `conform.nvim` | Formatting via uncrustify for C/C++, `\uf` |
