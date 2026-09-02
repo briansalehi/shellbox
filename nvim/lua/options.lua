@@ -28,6 +28,7 @@ opt.completeopt = "menu,noselect"
 opt.encoding = "utf-8"
 opt.fileencoding = "utf-8"
 opt.mouse = ""
+opt.undofile = true
 
 -- fold the leading license/copyright comment block
 local function header_range(buf)
