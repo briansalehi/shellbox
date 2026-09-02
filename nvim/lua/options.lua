@@ -12,6 +12,7 @@ opt.tabstop = 4
 opt.softtabstop = 4
 opt.shiftwidth = 4
 opt.signcolumn = "yes"
+opt.scrolloff = 8
 
 vim.diagnostic.config({
     signs = {
