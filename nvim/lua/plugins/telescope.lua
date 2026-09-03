@@ -15,8 +15,16 @@ require('telescope').setup({
       },
   },
   extensions = {
+      -- routes every vim.ui.select through telescope, so the long lists win a
+      -- fuzzy filter: the cursor and opencode model pickers, and cmake-tools'
+      -- generator, kit and preset prompts
+      ['ui-select'] = {
+          require('telescope.themes').get_dropdown({}),
+      },
   }
 })
+
+require('telescope').load_extension('ui-select')
 
 local telescope_builtin = require('telescope.builtin')
 

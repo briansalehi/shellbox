@@ -279,7 +279,7 @@
   <header class="mast">
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Plugin Reference</h1>
-    <p class="lede">43 plugins under Neovim's builtin <code>vim.pack</code>, what each one is for, and every key it owns. The list lives in <code>lua/plugins/init.lua</code>; each plugin's setup lives in the matching module under <code>lua/plugins/</code>.</p>
+    <p class="lede">44 plugins under Neovim's builtin <code>vim.pack</code>, what each one is for, and every key it owns. The list lives in <code>lua/plugins/init.lua</code>; each plugin's setup lives in the matching module under <code>lua/plugins/</code>.</p>
     <nav class="nav">
       <a href="./changelog.html">&larr; Changelog</a>
       <span>leader is \</span>
@@ -464,6 +464,11 @@
 
   <section>
     <h2>Finding and moving around</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">telescope-ui-select</span><span class="plug-tag">plugins/telescope.lua</span></div>
+      <p class="why">Registered as an extension, it replaces <code>vim.ui.select</code> with a telescope dropdown. Every prompt that goes through that API wins a fuzzy filter: the cursor model picker is 217 entries long, and cmake-tools asks for generators, kits and presets the same way. No keymap of its own.</p>
+    </div>
 
     <div class="plug">
       <div class="plug-head"><span class="plug-name">telescope.nvim</span> <span class="plug-name">telescope-fzf-native</span><span class="plug-tag">plugins/telescope.lua</span></div>
@@ -708,7 +713,7 @@
     </div>
   </section>
 
-  <footer>shellbox/nvim &middot; 43 plugins &middot; vim.pack &middot; nvim 0.13.0-dev</footer>
+  <footer>shellbox/nvim &middot; 44 plugins &middot; vim.pack &middot; nvim 0.13.0-dev</footer>
 
 </div>
 </body>

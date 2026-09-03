@@ -41,7 +41,7 @@ sudo cmake --install neovim/build
 
 ## Plugins
 
-43 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+44 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 Two HTML pages in `docs/` cover the same ground in more detail: `docs/plugins.html` is
@@ -70,6 +70,7 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 | Plugin | Purpose |
 | --- | --- |
 | `telescope.nvim` + `telescope-fzf-native` | Fuzzy picker. `\ff` files, `\fg` grep, `\fb` buffers, `\fk` keymaps |
+| `telescope-ui-select` | Routes every `vim.ui.select` through telescope, so long prompts get a fuzzy filter instead of a numbered cmdline list. No keymap of its own |
 | `harpoon` (v2) | Pin 4 files, jump with `\1`–`\4`. Faster than a picker for the files in flight |
 | `flash.nvim` | Jump anywhere on screen by typing a label (`\s`), or select treesitter nodes (`\S`) |
 | `oil.nvim` | File manager as an editable buffer (`-` or `\e`) — rename/delete by editing lines, `\ea` applies changes |
