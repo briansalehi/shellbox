@@ -16,6 +16,14 @@ dap.adapters.codelldb = {
 
 dapui.setup()
 
+-- nvim-dap-virtual-text - variable values inline next to the code while stepping
+-- dap-ui already shows scopes in a panel; this puts the same values on the
+-- lines they belong to, which is what you read when stepping a loop.
+require('nvim-dap-virtual-text').setup({
+    virt_text_pos = 'eol',
+    highlight_changed_variables = true,
+})
+
 vim.fn.sign_define('DapBreakpoint',         { text = "\u{F111}", texthl = 'DapBreakpoint',         linehl = '', numhl = '' })
 vim.fn.sign_define('DapBreakpointCondition',{ text = "\u{F444}", texthl = 'DapBreakpointCondition', linehl = '', numhl = '' })
 vim.fn.sign_define('DapLogPoint',           { text = "\u{F27A}", texthl = 'DapLogPoint',            linehl = '', numhl = '' })

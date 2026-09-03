@@ -19,6 +19,13 @@ map('<leader>xl', 'Trouble loclist toggle',                  'Trouble: location 
 map('<leader>xr', 'Trouble lsp_references toggle',           'Trouble: LSP references')
 map('<leader>xs', 'Trouble lsp_document_symbols toggle',     'Trouble: document symbols')
 
+-- todo-comments - highlight TODO/FIXME/HACK and list them through trouble
+require('todo-comments').setup()
+
+map('<leader>xt', 'Trouble todo toggle', 'Trouble: todo comments')
+vim.keymap.set('n', ']t', function() require('todo-comments').jump_next() end, { desc = 'Todo: next comment' })
+vim.keymap.set('n', '[t', function() require('todo-comments').jump_prev() end, { desc = 'Todo: prev comment' })
+
 -- quickfix
 map('<leader>qo', 'copen',  'Quickfix: open')
 map('<leader>qc', 'cclose', 'Quickfix: close')

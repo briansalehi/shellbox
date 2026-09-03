@@ -41,7 +41,7 @@ sudo cmake --install neovim/build
 
 ## Plugins
 
-43 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+46 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 ### Core / libraries
@@ -98,7 +98,9 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `overseer.nvim` + `toggleterm.nvim` | Task runner and terminal that cmake-tools drives for its build/run panels |
 | `clangd_extensions.nvim` | Inlay hints, AST view, source/header switch, type hierarchy, plus `\li` / `\lI` code actions |
 | `nvim-dap` + `nvim-dap-ui` | Debugger on `\d*`. `plugins.cmake` must load first — dap re-registers cmake-tools' debug function |
+| `nvim-dap-virtual-text` | Variable values shown at end of line while stepping, changed ones highlighted |
 | `trouble.nvim` | Diagnostics, references, and symbols in a navigable list (`\x*`) |
+| `todo-comments.nvim` | Highlights TODO/FIXME/HACK. `\xt` lists them in trouble, `]t` / `[t` jump |
 | `nvim-bqf` | Preview pane in the native quickfix window, so `\mb` build errors and `gr` references can be read in context while scrolling the list |
 
 ### Git
@@ -107,6 +109,7 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | --- | --- |
 | `neogit` | Magit-style git UI, `\gg` |
 | `diffview.nvim` | Side-by-side diffs and file history, `\gd` / `\gh` |
+| `gitsigns.nvim` | Live `+`/`~`/`-` markers for uncommitted lines. `]h` / `[h` walk hunks, `\gs` / `\gr` stage or reset one, `\gv` preview, `\gb` blame the line |
 
 ## Agents
 
