@@ -19,7 +19,7 @@ vim.keymap.set('n', '<leader>U', '<cmd>UndotreeToggle<CR>', { desc = 'Undotree: 
 require('illuminate').configure({
     providers = { 'lsp', 'regex' },
     filetypes_denylist = {
-        'oil', 'dashboard', 'harpoon', 'trouble', 'tagbar', 'undotree',
+        'oil', 'harpoon', 'trouble', 'undotree',
         'NeogitStatus', 'DiffviewFiles', 'toggleterm', 'dap-repl',
     },
 })

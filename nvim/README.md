@@ -41,7 +41,7 @@ sudo cmake --install neovim/build
 
 ## Plugins
 
-46 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+43 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 ### Core / libraries
@@ -58,7 +58,6 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | --- | --- |
 | `neovim-ayu` | Colorscheme (dark variant, custom `LineNr`) |
 | `lualine.nvim` | Statusline: mode, branch, diff, diagnostics, path, encoding, position |
-| `dashboard-nvim` | Start screen. Installed but never `setup()` — only a signcolumn autocmd |
 | `which-key.nvim` | Popup after 1s showing leader groups (`\f` find, `\m` cmake, `\d` debug, `\g` git, …) |
 
 ### Finding and moving around
@@ -72,7 +71,6 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `vim-lastplace` | Restores cursor to where the file was left |
 | `auto-session` | Per-directory session save/restore (skips `~` and `/`) |
 | `undotree` | Visual undo history, `\U` |
-| `tagbar` | ctags symbol sidebar. No config, no keymap |
 
 ### Editing
 
@@ -81,7 +79,6 @@ each plugin's setup lives in the matching module under `lua/plugins/`).
 | `nvim-cmp` + `cmp-nvim-lsp` + `cmp-buffer` | Completion, manual trigger only (`autocomplete = false`, `<C-Space>`) |
 | `LuaSnip` + `cmp_luasnip` + `friendly-snippets` | Snippet engine and community snippet pack |
 | `nvim-surround` | Add/change/delete surrounding quotes and brackets (`ys`, `cs`, `ds`) |
-| `vim-commentary` | `gc` to comment |
 | `vim-illuminate` | Faintly highlights other occurrences of the symbol under the cursor. lsp (clangd) then regex — the treesitter provider needs nvim-treesitter master. `<A-n>` / `<A-p>` jump between them, `<A-i>` selects one |
 | `mini.ai` | Smarter text objects (`ci(`, `va,`) across lines and treesitter nodes |
 | `nvim-treesitter` | Syntax/indent parsing for c, cpp, lua, cmake, python, rust |

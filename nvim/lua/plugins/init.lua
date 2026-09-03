@@ -11,7 +11,10 @@
 -- 'vim-snippets' -- useless, required by ultisnips
 -- 'vim-cmake' -- conflicts with cmake-tools
 -- 'vim-cpp-enhanced-highlight' -- conflicts with treesitter
--- 'gitsign', 'gitdiff' -- replaced by diffview
+-- 'gitdiff' -- replaced by diffview
+-- 'tagbar' -- never configured, trouble's document symbols covers it
+-- 'dashboard-nvim' -- installed but never setup(), so it never rendered
+-- 'vim-commentary' -- nvim ships gc/gcc natively since 0.10
 -- 'vim-airline' -- replaced by lualine
 
 vim.pack.add({
@@ -25,7 +28,6 @@ vim.pack.add({
     'https://github.com/nvim-treesitter/nvim-treesitter-context',
     'https://github.com/farmergreg/vim-lastplace',
     'https://github.com/kylechui/nvim-surround',
-    'https://github.com/tpope/vim-commentary',
     'https://github.com/hrsh7th/nvim-cmp',
     'https://github.com/hrsh7th/cmp-nvim-lsp',
     'https://github.com/hrsh7th/cmp-buffer',
@@ -36,8 +38,6 @@ vim.pack.add({
     'https://github.com/sindrets/diffview.nvim',
     'https://github.com/NeogitOrg/neogit',
     'https://github.com/nvim-lualine/lualine.nvim',
-    'https://github.com/preservim/tagbar',
-    'https://github.com/glepnir/dashboard-nvim',
     'https://github.com/nvim-lua/plenary.nvim',
     'https://github.com/stevearc/overseer.nvim',
     'https://github.com/akinsho/toggleterm.nvim',

@@ -15,18 +15,6 @@ require('lualine').setup({
     },
 })
 
--- dashboard
-vim.api.nvim_create_autocmd('FileType', {
-    pattern = 'dashboard',
-    callback = function()
-        vim.api.nvim_create_autocmd('BufLeave', {
-            buffer = 0,
-            once = true,
-            callback = function() vim.opt.signcolumn = 'yes' end,
-        })
-    end,
-})
-
 -- which-key: group labels
 local wk = require('which-key')
 wk.setup({ delay = 1000 })
