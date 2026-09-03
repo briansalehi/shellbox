@@ -23,6 +23,9 @@ vim.diagnostic.config({
             [vim.diagnostic.severity.HINT]  = "\u{F0EB}",
         },
     },
+    -- signs alone meant reading a diagnostic needed gl; virtual_lines renders
+    -- the message under the cursor's line only, so the rest stays uncluttered
+    virtual_lines = { current_line = true },
 })
 opt.updatetime = 250
 opt.completeopt = "menu,noselect"
