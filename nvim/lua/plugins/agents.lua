@@ -75,6 +75,38 @@ local function opencode_models()
     return out
 end
 
+-- cursor takes its instructions from .cursor/rules and AGENTS.md, so there is no
+-- prompt flag to pair with the model: the picker is just --model. Cached like
+-- opencode's, and `--list-models` exits non-zero when logged out.
+local cursor_cache = nil
+
+local function cursor_models()
+    if not cursor_cache then
+        if vim.fn.executable('cursor-agent') ~= 1 then return {} end
+        local lines = vim.fn.systemlist({ 'cursor-agent', '--list-models' })
+        if vim.v.shell_error ~= 0 then
+            vim.notify('agents: `cursor-agent --list-models` failed (logged in?)',
+                vim.log.levels.ERROR)
+            return {}
+        end
+        cursor_cache = lines
+    end
+
+    -- the command prints `<id> - <Display Name>` rows between an "Available models"
+    -- heading and a trailing tip line; requiring an id-shaped first field drops both
+    local out = {}
+    for _, line in ipairs(cursor_cache) do
+        local model, label = vim.trim(line):match('^([%w][%w%.%-_]*)%s+%-%s+(.+)$')
+        if model then
+            table.insert(out, {
+                label = ('%-36s %s'):format(model, label),
+                args  = { '--model', model },
+            })
+        end
+    end
+    return out
+end
+
 agents.setup({
     window = { split_ratio = 0.33 },
     agents = {
@@ -100,6 +132,15 @@ agents.setup({
             },
             models = opencode_models,
         },
+        {
+            name = 'cursor',
+            cmd = 'cursor-agent',
+            variants = {
+                continue = { '--continue' },
+                resume   = { '--resume' },
+            },
+            models = cursor_models,
+        },
     },
 })
 
@@ -124,6 +165,10 @@ map('<leader>cY', toggle('claude', 'yoloContinue'),    'Agent: claude (skip perm
 map('<leader>ca', pick_model('opencode'),              'Agent: opencode model')
 map('<leader>co', toggle('opencode'),                  'Agent: opencode')
 map('<leader>cO', toggle('opencode', 'continue'),      'Agent: opencode (continue)')
+map('<leader>cs', pick_model('cursor'),                'Agent: cursor model')
+map('<leader>cS', pick_model('cursor', 'continue'),    'Agent: cursor model (continue)')
+map('<leader>cu', toggle('cursor'),                    'Agent: cursor')
+map('<leader>cU', toggle('cursor', 'continue'),        'Agent: cursor (continue)')
 map('<leader>cp', agents.pick,                         'Agent: pick or focus')
 
 -- <C-l> is not free: <C-h/j/k/l> leave the terminal window, so redraw lives on <M-r>

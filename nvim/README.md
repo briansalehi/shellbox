@@ -129,10 +129,12 @@ one is a new entry plus a `map(...)` line.
 | `\cy` / `\cY` | claude, skip permissions / skip permissions and continue |
 | `\ca` | opencode model picker |
 | `\co` / `\cO` | opencode, plain / continue last session |
+| `\cs` / `\cS` | cursor model picker, plain / continue last chat |
+| `\cu` / `\cU` | cursor, plain / continue last chat |
 | `\cp` | pick or focus a running agent |
 | `<M-r>` | redraw the terminal (`<C-l>` is not free: `<C-h/j/k/l>` leave the window) |
 
-Model pickers are per-agent, because the two agents take a system prompt through
+Model pickers are per-agent, because each agent takes a system prompt through
 different flags and must never be offered each other's models. Claude lists
 `~/.config/models/claude/*.md` and launches
 `--model <name> --append-system-prompt-file <path>`. Opencode lists what
@@ -140,7 +142,11 @@ different flags and must never be offered each other's models. Claude lists
 launches `--model <provider/model>`; opencode has no prompt-file flag, so a prompt
 reaches it only as an agent definition in `~/.config/opencode/agent/*.md` whose
 frontmatter `model:` names that model, and such a model is shown as
-`ollama/qwen3:8b  [name]` and launched with `--agent <name>` as well.
+`ollama/qwen3:8b  [name]` and launched with `--agent <name>` as well. Cursor lists
+what `cursor-agent --list-models` reports (cached the same way, and it exits
+non-zero until `cursor-agent login` has run) and launches `--model <name>` with
+nothing else: cursor takes its instructions from `.cursor/rules` and `AGENTS.md`,
+so it has no prompt flag to pair with a model.
 
 Opening or toggling an agent lands in insert mode, but nothing re-enters insert on
 `WinEnter`, so leaving with `<C-\><C-n>` and switching windows keeps the scrollback
