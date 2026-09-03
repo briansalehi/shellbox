@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>4372779</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>c9b18cf</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -281,6 +281,15 @@
     <h2>2026-09-03</h2>
     <p class="rel-note">A third coding agent, wired through the same terminal engine as the other two, and the two picker problems that turned up behind it.</p>
     <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">c9b18cf</span>
+          <span class="subject">The one-time fzf build, written down</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why">The <code>PackChanged</code> hook can only fire for installs and updates that happen after it exists, so every machine whose plugins were already on disk still needs one manual <code>make</code>. That is now a per-machine step in the README, and the startup warning resolves the plugin path through <code>vim.pack.get()</code> and prints the command to run rather than only reporting that the load failed.</p>
+      </div>
 
       <div class="entry">
         <div class="entry-head">
