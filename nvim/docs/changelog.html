@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>046412c</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>13e008f</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -279,8 +279,17 @@
 
   <section class="release">
     <h2>2026-09-03</h2>
-    <p class="rel-note">A third coding agent, wired through the same terminal engine as the other two.</p>
+    <p class="rel-note">A third coding agent, wired through the same terminal engine as the other two, and a picker that can cope with its model list.</p>
     <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">13e008f</span>
+          <span class="subject">vim.ui.select through telescope</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">The cursor model picker returns 217 entries, and the builtin <code>vim.ui.select</code> renders those as a numbered cmdline list that has to be paged to reach anything. telescope-ui-select replaces the API with a dropdown, so the list is fuzzy-filtered. Registered as an extension rather than called directly, so the opencode picker and cmake-tools' generator, kit and preset prompts pick it up unchanged.</p>
+      </div>
 
       <div class="entry">
         <div class="entry-head">
