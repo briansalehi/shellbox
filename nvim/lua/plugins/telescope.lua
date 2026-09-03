@@ -49,10 +49,13 @@ vim.api.nvim_create_autocmd('PackChanged', {
 
 -- load_extension is what actually swaps in the native sorter; without this call the
 -- plugin is installed and unused, and telescope quietly keeps its own sorter
-local ok, err = pcall(require('telescope').load_extension, 'fzf')
+local ok = pcall(require('telescope').load_extension, 'fzf')
 if not ok then
-    vim.notify('telescope: fzf sorter unavailable, `make` in the plugin directory\n'
-        .. tostring(err), vim.log.levels.WARN)
+    -- the PackChanged hook only fires on a future install or update, so a checkout
+    -- that predates it needs one manual build; name the command rather than the fault
+    local got = vim.pack.get({ 'telescope-fzf-native.nvim' })[1]
+    vim.notify(('telescope: the fzf sorter is not built, run\n    make -C %s')
+        :format(got and got.path or '<telescope-fzf-native.nvim>'), vim.log.levels.WARN)
 end
 
 require('telescope').load_extension('ui-select')

@@ -39,6 +39,25 @@ cmake --build neovim/build --parallel $(nproc)
 sudo cmake --install neovim/build
 ```
 
+### Per-machine step: build the fzf sorter
+
+Run this once on every machine, after the first `nvim` start has installed the
+plugins:
+
+```sh
+make -C ~/.local/share/nvim/site/pack/core/opt/telescope-fzf-native.nvim
+```
+
+`telescope-fzf-native` is a C library and `vim.pack` has no build step, so nvim
+clones it without compiling `build/libfzf.so`. A `PackChanged` autocmd in
+`lua/plugins/telescope.lua` runs `make` on install and update, but it can only fire
+for changes that happen after it exists: a machine whose plugins were installed
+earlier still needs the command above, once.
+
+Nothing breaks without it. `load_extension('fzf')` is wrapped in `pcall`, so
+telescope falls back to its own Lua sorter and prints the exact `make` command to
+run at startup. If you never see that warning, the sorter is already built.
+
 ## Plugins
 
 44 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
