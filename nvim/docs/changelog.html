@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nvim Changelog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<!--
+  Dated log of changes to this Neovim config, newest entry first.
+
+  ADDING AN ENTRY (agents included):
+    1. Add a new <section class="release"> directly below "How to add an entry",
+       above the previous newest entry.
+    2. Its <h2> is the ISO date, its .rel-note is one sentence on the theme of
+       the batch.
+    3. One .entry per commit: short sha, subject, a tag, and a <p class="why">
+       saying why it landed - the reason, not the diff.
+    4. Tags are: option (a vim setting), plugin (added), removed, fix.
+    5. Update the .range chip in the header to the new commit range.
+
+  The CSS is duplicated in plugins.html on purpose: each page must open from
+  the filesystem with no network and no sibling files. Mirror palette or type
+  changes across both.
+-->
+<style>
+  :root {
+    --bg:        #FBFAF7;
+    --surface:   #FFFFFF;
+    --ink:       #2F343A;
+    --ink-soft:  #6B7178;
+    --ink-faint: #949AA1;
+    --line:      #E5E1D8;
+    --line-soft: #F0EDE5;
+    --accent:    #B36B00;
+    --accent-bg: #FBF1DF;
+    --add:       #2E7D32;
+    --del:       #B3261E;
+    --info:      #0B6E99;
+
+    --f-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0D1017;
+      --surface:   #141922;
+      --ink:       #BFBDB6;
+      --ink-soft:  #8B9099;
+      --ink-faint: #676D78;
+      --line:      #222835;
+      --line-soft: #1A1F29;
+      --accent:    #E6B450;
+      --accent-bg: #241E10;
+      --add:       #7FD962;
+      --del:       #F07178;
+      --info:      #59C2FF;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        #0D1017;
+    --surface:   #141922;
+    --ink:       #BFBDB6;
+    --ink-soft:  #8B9099;
+    --ink-faint: #676D78;
+    --line:      #222835;
+    --line-soft: #1A1F29;
+    --accent:    #E6B450;
+    --accent-bg: #241E10;
+    --add:       #7FD962;
+    --del:       #F07178;
+    --info:      #59C2FF;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  img { max-width: 100%; }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 40px 20px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+
+  .mast { display: flex; flex-direction: column; gap: 14px; }
+
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .lede { margin: 0; color: var(--ink-soft); max-width: 60ch; }
+
+  .range {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 7px 11px;
+    align-self: flex-start;
+    background: var(--surface);
+  }
+  .range b { color: var(--ink); font-weight: 600; }
+
+  .nav {
+    display: flex;
+    gap: 16px;
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+  }
+  .nav a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+  .nav a:hover, .nav a:focus-visible { border-bottom-color: var(--accent); }
+  .nav span { color: var(--ink-faint); }
+
+  section { display: flex; flex-direction: column; gap: 18px; }
+
+  h2 {
+    margin: 0;
+    font-size: 13px;
+    font-family: var(--f-mono);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rel-note { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 62ch; }
+
+  .log { display: flex; flex-direction: column; }
+
+  .entry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 0 16px 16px;
+    border-left: 2px solid var(--line);
+  }
+  .entry:hover { border-left-color: var(--accent); }
+
+  .entry-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .sha {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .subject { font-weight: 600; font-size: 15.5px; }
+
+  .why { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 60ch; }
+  .why code, .rel-note code, .howto code, .outside p code {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+    color: var(--ink);
+    background: var(--line-soft);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  .tag {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+  }
+  .t-add { color: var(--add); }
+  .t-drop { color: var(--del); }
+  .t-set { color: var(--info); }
+
+  .howto {
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 18px 20px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .howto p { margin: 0; max-width: 62ch; }
+  .howto b { color: var(--ink); font-weight: 600; }
+
+  .outside {
+    background: var(--accent-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .outside h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .outside p { margin: 0; font-size: 15px; color: var(--ink-soft); }
+  .outside p b { color: var(--ink); font-weight: 600; }
+
+  footer {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 460px) {
+    h1 { font-size: 25px; }
+    .page { padding: 32px 16px 56px; gap: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <div class="eyebrow">shellbox / nvim</div>
+    <h1>Changelog</h1>
+    <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>d4f664b</b> &middot; master</div>
+    <nav class="nav">
+      <a href="./plugins.html">Plugin reference &rarr;</a>
+      <span>../README.md for setup</span>
+    </nav>
+  </header>
+
+  <section>
+    <h2>How to add an entry</h2>
+    <div class="howto">
+      <p>Add a new <code>section.release</code> directly below this box, above the previous newest entry. Its <b>heading is the ISO date</b>; one <code>div.entry</code> per commit, carrying the short sha, the subject, a tag, and one sentence on <b>why</b> it landed — the reason, not the diff.</p>
+      <p>Tags are <b>option</b> for a vim setting, <b>plugin</b> for an addition, <b>removed</b>, and <b>fix</b>. Update the commit range chip in the header too. Full instructions sit in the HTML comment at the top of this file.</p>
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-03</h2>
+    <p class="rel-note">Filling gaps found by reading a third-party config against this one: git hunks, debugger values, todo routing, and three plugins that turned out to do nothing.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">f739bc6</span>
+          <span class="subject">gitsigns, dap virtual text, todo-comments</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">The plugin list carried a note reading <em>gitsigns replaced by diffview</em>, which conflated two different jobs: diffview is a window you open, gitsigns marks uncommitted lines as you type and gives per-hunk staging. dap-virtual-text puts scope values on the lines they belong to while stepping, which dap-ui only shows in a panel. todo-comments routes TODO and FIXME through the trouble list already in use.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">6a3faec</span>
+          <span class="subject">Inline diagnostics</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">The diagnostic config set <code>signs</code> only, so reading any clang-tidy warning meant pressing <code>gl</code> first. <code>virtual_lines = { current_line = true }</code> has been builtin since 0.11 and renders the message under the cursor's line only, leaving the rest of the buffer uncluttered.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">d4f664b</span>
+          <span class="subject">Three plugins doing nothing</span>
+          <span class="tag t-drop">removed</span>
+        </div>
+        <p class="why"><code>tagbar</code> had no config and no keymap. <code>dashboard-nvim</code> was never <code>setup()</code>, so it never rendered — only a stray signcolumn autocmd referenced it. <code>vim-commentary</code> is redundant because <code>gc</code> and <code>gcc</code> have been builtin since 0.10 and behave identically.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-02</h2>
+    <p class="rel-note">Two missing options and three plugins that add context the config had no way to show.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">ebb0ceb</span>
+          <span class="subject">Persistent undo</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Undo history lived in memory, so it died with the buffer. <code>undotree</code> had been re-added after an earlier commit dropped the option and the plugin together, leaving the plugin browsing only the current session. The default undodir needed no setting.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">69031c9</span>
+          <span class="subject">Cursor context lines</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Jumps from <code>gd</code>, <code>]d</code> and <code>:cnext</code> scroll the minimum needed to reveal the target, which regularly parked it on the last visible row with nothing beneath it. <code>scrolloff = 8</code> keeps eight lines under every landing.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">9513f6f</span>
+          <span class="subject">vim-illuminate</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">Other uses of the symbol under the cursor go grey with no keypress, replacing a reach for <code>*</code> or <code>gr</code> just to see where a variable is touched. Providers are lsp then regex: the treesitter provider needs <code>nvim-treesitter.locals</code>, which the main-branch rewrite does not ship.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">3247b06</span>
+          <span class="subject">nvim-bqf</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why"><code>cmake_executor</code> is the quickfix executor, so a failed build opens the native quickfix window on its own. bqf previews each entry in place while scrolling the list, instead of jumping to find out what an entry is. trouble covers the same entries but only behind <code>\xq</code>.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">7c0f30f</span>
+          <span class="subject">nvim-treesitter-context</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">Pins the enclosing function and loop to the top of the window while scrolling a long member function. <code>max_lines</code> defaults to no limit, which nested C++ would use to fill the window, so it is capped at 3 and switched off in windows under 20 rows.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Outside the config</h2>
+    <div class="outside">
+      <div>
+        <h3>tree-sitter-cli, 2026-09-03</h3>
+        <p>The parser directory was empty. Only nvim's bundled parsers existed — <b>c, lua, markdown, vim, vimdoc, query</b> — so <b>cpp, cmake, python and rust had no treesitter at all</b> and every launch silently retried a failing install. Installing the CLI built all four. C++ had been running on regex highlighting. Not a config change, but the config depended on it.</p>
+      </div>
+      <div>
+        <h3>GitHub mirror, 2026-09-02</h3>
+        <p>A repo-scoped deploy key at <b>~/.ssh/shellbox_mirror_ed25519</b>, an ssh alias <b>github-shellbox</b>, and the <b>github</b> remote repointed at it. Scoped to this repository rather than the account, so a passphraseless key on a production box cannot reach anything else.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>shellbox/nvim &middot; vim.pack &middot; nvim 0.13.0-dev</footer>
+
+</div>
+</body>
+</html>

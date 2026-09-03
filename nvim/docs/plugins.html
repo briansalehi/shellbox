@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nvim Plugin Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<!--
+  Reference for every plugin in lua/plugins/init.lua, with the keymaps each one
+  owns. Companion to changelog.html.
+
+  KEEPING THIS CURRENT:
+    Whenever a plugin is added to or removed from vim.pack.add({...}), update
+    this page in the same change - the entry, its keys, and the count in the
+    header - alongside the ## Plugins table in ../README.md.
+
+  The CSS is duplicated in changelog.html on purpose: each page must open from
+  the filesystem with no network and no sibling files. Mirror palette or type
+  changes across both.
+-->
+<style>
+  :root {
+    --bg:        #FBFAF7;
+    --surface:   #FFFFFF;
+    --ink:       #2F343A;
+    --ink-soft:  #6B7178;
+    --ink-faint: #949AA1;
+    --line:      #E5E1D8;
+    --line-soft: #F0EDE5;
+    --accent:    #B36B00;
+    --accent-bg: #FBF1DF;
+    --add:       #2E7D32;
+    --del:       #B3261E;
+    --info:      #0B6E99;
+
+    --f-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0D1017;
+      --surface:   #141922;
+      --ink:       #BFBDB6;
+      --ink-soft:  #8B9099;
+      --ink-faint: #676D78;
+      --line:      #222835;
+      --line-soft: #1A1F29;
+      --accent:    #E6B450;
+      --accent-bg: #241E10;
+      --add:       #7FD962;
+      --del:       #F07178;
+      --info:      #59C2FF;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        #0D1017;
+    --surface:   #141922;
+    --ink:       #BFBDB6;
+    --ink-soft:  #8B9099;
+    --ink-faint: #676D78;
+    --line:      #222835;
+    --line-soft: #1A1F29;
+    --accent:    #E6B450;
+    --accent-bg: #241E10;
+    --add:       #7FD962;
+    --del:       #F07178;
+    --info:      #59C2FF;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  img { max-width: 100%; }
+
+  .page {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 40px 20px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+
+  .mast { display: flex; flex-direction: column; gap: 14px; }
+
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .lede { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+
+  .nav {
+    display: flex;
+    gap: 16px;
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+  }
+  .nav a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+  .nav a:hover, .nav a:focus-visible { border-bottom-color: var(--accent); }
+  .nav span { color: var(--ink-faint); }
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+
+  h2 {
+    margin: 0;
+    font-size: 13px;
+    font-family: var(--f-mono);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .note { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 62ch; }
+  .note code, .why code, .caveat code {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+    color: var(--ink);
+    background: var(--line-soft);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* leader group overview */
+  .groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .grp {
+    background: var(--bg);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .grp b {
+    font-family: var(--f-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .grp span { font-size: 13px; color: var(--ink-soft); }
+
+  /* plugin entries */
+  .plug {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 16px;
+    border-left: 2px solid var(--line);
+  }
+  .plug:hover { border-left-color: var(--accent); }
+
+  .plug-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .plug-name {
+    font-family: var(--f-mono);
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .plug-tag {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .why { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 62ch; }
+
+  .keys {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px 16px;
+    align-items: baseline;
+    margin-top: 2px;
+  }
+  .keys dt {
+    font-family: var(--f-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .keys dd {
+    margin: 0;
+    padding: 4px 0;
+    font-size: 14px;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .keys dt:last-of-type, .keys dd:last-of-type { border-bottom: 0; }
+
+  .caveat {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-faint);
+    max-width: 62ch;
+  }
+
+  .order {
+    background: var(--accent-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .order b { color: var(--ink); font-weight: 600; }
+  .order p { margin: 0; max-width: 62ch; }
+
+  footer {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 460px) {
+    h1 { font-size: 25px; }
+    .page { padding: 32px 16px 56px; gap: 38px; }
+    .keys { grid-template-columns: 1fr; gap: 0; }
+    .keys dt { padding: 8px 0 0; border-bottom: 0; }
+    .keys dd { padding: 0 0 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <div class="eyebrow">shellbox / nvim</div>
+    <h1>Plugin Reference</h1>
+    <p class="lede">43 plugins under Neovim's builtin <code>vim.pack</code>, what each one is for, and every key it owns. The list lives in <code>lua/plugins/init.lua</code>; each plugin's setup lives in the matching module under <code>lua/plugins/</code>.</p>
+    <nav class="nav">
+      <a href="./changelog.html">&larr; Changelog</a>
+      <span>leader is \</span>
+    </nav>
+  </header>
+
+  <section>
+    <h2>Leader groups</h2>
+    <p class="note">which-key shows these after a one second pause on <code>\</code>.</p>
+    <div class="groups">
+      <div class="grp"><b>\f</b><span>find</span></div>
+      <div class="grp"><b>\e</b><span>oil</span></div>
+      <div class="grp"><b>\m</b><span>cmake</span></div>
+      <div class="grp"><b>\mp</b><span>preset</span></div>
+      <div class="grp"><b>\mt</b><span>ctest</span></div>
+      <div class="grp"><b>\g</b><span>git</span></div>
+      <div class="grp"><b>\h</b><span>harpoon</span></div>
+      <div class="grp"><b>\d</b><span>debug</span></div>
+      <div class="grp"><b>\l</b><span>lsp</span></div>
+      <div class="grp"><b>\u</b><span>format</span></div>
+      <div class="grp"><b>\c</b><span>agents</span></div>
+      <div class="grp"><b>\r</b><span>refactor</span></div>
+      <div class="grp"><b>\x</b><span>trouble</span></div>
+      <div class="grp"><b>\q</b><span>quickfix</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>C / C++ workflow</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">cmake-tools.nvim</span><span class="plug-tag">plugins/cmake.lua</span></div>
+      <p class="why">Configure, build, run, test, presets, kits and build types. Its executor is the quickfix executor, so a failed build lands in the native quickfix window.</p>
+      <dl class="keys">
+        <dt>\mg</dt><dd>Configure (generate)</dd>
+        <dt>\mb</dt><dd>Build target</dd>
+        <dt>\mr</dt><dd>Run</dd>
+        <dt>\md</dt><dd>Debug</dd>
+        <dt>\mc</dt><dd>CMake settings</dd>
+        <dt>\mC</dt><dd>Clean</dd>
+        <dt>\mw</dt><dd>Remove build directory</dd>
+        <dt>\mT</dt><dd>Select build type</dd>
+        <dt>\mB</dt><dd>Select build target</dd>
+        <dt>\mL</dt><dd>Select launch target</dd>
+        <dt>\mK</dt><dd>Select kit</dd>
+        <dt>\mG</dt><dd>Select generator, build type, configure</dd>
+        <dt>\mf</dt><dd>Build targets using this file</dd>
+        <dt>\mR</dt><dd>Set launch args</dd>
+        <dt>\mF</dt><dd>Flash (idf flash target)</dd>
+        <dt>\mv</dt><dd>Cache options</dd>
+        <dt>\mV</dt><dd>Cache options, including advanced</dd>
+        <dt>\ms &middot; \mS</dt><dd>Stop runner / executor</dd>
+        <dt>\mo &middot; \mO</dt><dd>Open runner / executor panel</dd>
+        <dt>\mx &middot; \mX</dt><dd>Close runner / executor panel</dd>
+        <dt>\mpc &middot; \mpb &middot; \mpt</dt><dd>Select configure / build / test preset</dd>
+      </dl>
+      <p class="caveat">Cache options are not cmake-tools' job: <code>\mv</code> lists <code>cmake -LH</code>, stages edits into the generate options <code>\mc</code> shows, and reconfigures once.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">ctest</span><span class="plug-tag">plugins/cmake.lua</span></div>
+      <p class="why">Test running grouped under <code>\mt</code>, on top of cmake-tools' runner.</p>
+      <dl class="keys">
+        <dt>\mta</dt><dd>Run all tests</dd>
+        <dt>\mtb</dt><dd>Build then run all tests</dd>
+        <dt>\mts</dt><dd>Pick a test or label to run</dd>
+        <dt>\mtr</dt><dd>Run tests matching a regex</dd>
+        <dt>\mtu</dt><dd>Repeat until fail</dd>
+        <dt>\mtf</dt><dd>Rerun failed tests</dd>
+        <dt>\mtl</dt><dd>List tests</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">clangd_extensions.nvim</span><span class="plug-tag">plugins/clangd.lua</span></div>
+      <p class="why">The clangd-specific requests the LSP protocol has no verb for.</p>
+      <dl class="keys">
+        <dt>\lh</dt><dd>Toggle inlay hints</dd>
+        <dt>\ls</dt><dd>Switch source / header</dd>
+        <dt>\la</dt><dd>Show AST</dd>
+        <dt>\lt</dt><dd>Type hierarchy</dd>
+        <dt>\lS</dt><dd>Symbol info</dd>
+        <dt>\lm</dt><dd>Memory usage</dd>
+        <dt>\li &middot; \lI</dt><dd>clangd code actions</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-dap</span> <span class="plug-name">nvim-dap-ui</span><span class="plug-tag">plugins/dap.lua</span></div>
+      <p class="why">Debugger over codelldb. dap-ui opens on session start and closes on exit.</p>
+      <dl class="keys">
+        <dt>\dc</dt><dd>Continue</dd>
+        <dt>\dn</dt><dd>Step over</dd>
+        <dt>\di</dt><dd>Step into</dd>
+        <dt>\do</dt><dd>Step out</dd>
+        <dt>\db</dt><dd>Toggle breakpoint</dd>
+        <dt>\dB</dt><dd>Conditional breakpoint</dd>
+        <dt>\dl</dt><dd>Log point</dd>
+        <dt>\dC</dt><dd>Clear all breakpoints</dd>
+        <dt>\dR</dt><dd>Run to cursor</dd>
+        <dt>\dh</dt><dd>Hover variable</dd>
+        <dt>\dr</dt><dd>Open REPL</dd>
+        <dt>\du</dt><dd>Toggle UI</dd>
+        <dt>\dx</dt><dd>Terminate session</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-dap-virtual-text</span><span class="plug-tag">plugins/dap.lua</span></div>
+      <p class="why">Variable values at end of line while stepping, changed ones highlighted. No keymaps — it follows the debug session.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">trouble.nvim</span><span class="plug-tag">plugins/diagnostics.lua</span></div>
+      <p class="why">Diagnostics, references and symbols in one navigable list.</p>
+      <dl class="keys">
+        <dt>\xx</dt><dd>All diagnostics</dd>
+        <dt>\xd</dt><dd>Buffer diagnostics</dd>
+        <dt>\xq</dt><dd>Quickfix list</dd>
+        <dt>\xl</dt><dd>Location list</dd>
+        <dt>\xr</dt><dd>LSP references</dd>
+        <dt>\xs</dt><dd>Document symbols</dd>
+        <dt>\xt</dt><dd>Todo comments</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-bqf</span><span class="plug-tag">plugins/diagnostics.lua</span></div>
+      <p class="why">Preview pane in the native quickfix window, so build errors and <code>gr</code> references read in context while scrolling. Keys below are buffer-local to the quickfix window; the <code>\q</code> group opens and walks the list itself.</p>
+      <dl class="keys">
+        <dt>C-f &middot; C-b</dt><dd>Scroll the preview without leaving the list</dd>
+        <dt>p &middot; P</dt><dd>Toggle preview for this item / automatically</dd>
+        <dt>Tab</dt><dd>Mark an entry</dd>
+        <dt>zn &middot; zN</dt><dd>Filter to / away from marked entries</dd>
+        <dt>C-p &middot; C-n</dt><dd>Previous / next file in the list</dd>
+        <dt>\qo &middot; \qc</dt><dd>Open / close quickfix</dd>
+        <dt>\qn &middot; \qp</dt><dd>Next / previous entry</dd>
+        <dt>\qf &middot; \ql</dt><dd>First / last entry</dd>
+      </dl>
+      <p class="caveat"><code>zf</code> fzf filtering is bound but inert on fserver — no fzf binary.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">todo-comments.nvim</span><span class="plug-tag">plugins/diagnostics.lua</span></div>
+      <p class="why">Highlights TODO, FIXME and HACK, and routes them through trouble.</p>
+      <dl class="keys">
+        <dt>\xt</dt><dd>List every todo in trouble</dd>
+        <dt>]t &middot; [t</dt><dd>Next / previous todo comment</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">overseer.nvim</span> <span class="plug-name">toggleterm.nvim</span><span class="plug-tag">plugins/cmake.lua</span></div>
+      <p class="why">Task runner and terminal that cmake-tools drives for its build and run panels. No keymaps of their own.</p>
+    </div>
+
+    <div class="order">
+      <p><b>Load order matters in one place.</b> <code>plugins.cmake</code> must be required before <code>plugins.dap</code>: cmake-tools calls <code>register_dap_function()</code> before nvim-dap exists, so the dap module re-runs it.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Language server</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">vim.lsp</span><span class="plug-tag">lua/lsp.lua &middot; not a plugin</span></div>
+      <p class="why">clangd configured directly through <code>vim.lsp.config</code>, no lspconfig and no mason. Keys are bound on <code>LspAttach</code>, so they exist only in buffers with a server.</p>
+      <dl class="keys">
+        <dt>gd &middot; gD</dt><dd>Definition / declaration</dd>
+        <dt>gi &middot; gr</dt><dd>Implementation / references</dd>
+        <dt>K</dt><dd>Hover</dd>
+        <dt>\rn</dt><dd>Rename symbol</dd>
+        <dt>\lc</dt><dd>Code action</dd>
+        <dt>\lf</dt><dd>Format buffer or selection</dd>
+        <dt>gl</dt><dd>Diagnostics float</dd>
+        <dt>]d &middot; [d</dt><dd>Next / previous diagnostic</dd>
+        <dt>C-s</dt><dd>Signature help, insert mode</dd>
+      </dl>
+      <p class="caveat">Diagnostics also render inline under the cursor's line via the builtin <code>virtual_lines</code>, so <code>gl</code> is only needed for the full float.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Finding and moving around</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">telescope.nvim</span> <span class="plug-name">telescope-fzf-native</span><span class="plug-tag">plugins/telescope.lua</span></div>
+      <p class="why">Fuzzy picker with the native fzf sorter compiled in.</p>
+      <dl class="keys">
+        <dt>\ff</dt><dd>Find files</dd>
+        <dt>\fg</dt><dd>Live grep</dd>
+        <dt>\fi</dt><dd>Git files</dd>
+        <dt>\fb</dt><dd>Buffers</dd>
+        <dt>\fh</dt><dd>Help tags</dd>
+        <dt>\fk</dt><dd>Keymaps</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">harpoon</span><span class="plug-tag">v2 &middot; plugins/navigation.lua</span></div>
+      <p class="why">Pin the handful of files in flight and jump to them by number. Faster than a picker when you already know the file.</p>
+      <dl class="keys">
+        <dt>\a</dt><dd>Add current file</dd>
+        <dt>\h</dt><dd>Quick menu</dd>
+        <dt>\1 &ndash; \4</dt><dd>Jump to pinned file</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">flash.nvim</span><span class="plug-tag">plugins/navigation.lua</span></div>
+      <p class="why">Jump anywhere on screen by typing a label. Character mode is off, so <code>f</code> and <code>t</code> behave normally.</p>
+      <dl class="keys">
+        <dt>\s</dt><dd>Jump</dd>
+        <dt>\S</dt><dd>Treesitter node select</dd>
+        <dt>r</dt><dd>Remote, operator pending</dd>
+        <dt>R</dt><dd>Treesitter search, operator or visual</dd>
+        <dt>C-s</dt><dd>Toggle inside a search</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">oil.nvim</span><span class="plug-tag">plugins/navigation.lua</span></div>
+      <p class="why">File manager as an editable buffer: rename and delete by editing lines, then apply.</p>
+      <dl class="keys">
+        <dt>- &middot; \e</dt><dd>Open the containing directory</dd>
+        <dt>\ea</dt><dd>Apply the edits</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">undotree</span><span class="plug-tag">plugins/editor.lua</span></div>
+      <p class="why">Visual undo history, including branches you undid and typed over. Backed by <code>undofile</code>, so the tree survives closing the buffer.</p>
+      <dl class="keys">
+        <dt>\U</dt><dd>Toggle the tree</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">auto-session</span><span class="plug-tag">plugins/editor.lua</span></div>
+      <p class="why">Per-directory session save and restore, skipping <code>~</code> and <code>/</code>. No keymaps.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">vim-lastplace</span><span class="plug-tag">no config</span></div>
+      <p class="why">Restores the cursor to where a file was left. No keymaps.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Editing</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-cmp</span> <span class="plug-name">cmp-nvim-lsp</span> <span class="plug-name">cmp-buffer</span><span class="plug-tag">plugins/completion.lua</span></div>
+      <p class="why">Completion with <code>autocomplete = false</code> — the menu appears only when asked for, never while typing.</p>
+      <dl class="keys">
+        <dt>C-Space</dt><dd>Open the menu</dd>
+        <dt>Tab &middot; S-Tab</dt><dd>Next / previous item</dd>
+        <dt>CR</dt><dd>Confirm, no preselect</dd>
+        <dt>C-e</dt><dd>Abort</dd>
+        <dt>C-j &middot; C-k</dt><dd>Scroll the docs window</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">LuaSnip</span> <span class="plug-name">cmp_luasnip</span> <span class="plug-name">friendly-snippets</span><span class="plug-tag">plugins/completion.lua</span></div>
+      <p class="why">Snippet engine and the community snippet pack, expanded through the completion menu.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">vim-illuminate</span><span class="plug-tag">plugins/editor.lua</span></div>
+      <p class="why">Faintly highlights other occurrences of the symbol under the cursor once it rests. Providers are lsp then regex — the treesitter provider needs <code>nvim-treesitter.locals</code>, absent from the main-branch rewrite, so C++ resolves through clangd and everything else by word match.</p>
+      <dl class="keys">
+        <dt>A-n &middot; A-p</dt><dd>Next / previous occurrence</dd>
+        <dt>A-i</dt><dd>Select an occurrence as a text object</dd>
+      </dl>
+      <p class="caveat"><code>:IlluminateDebug</code> names the provider it picked for the current buffer.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-treesitter</span><span class="plug-tag">main branch &middot; plugins/treesitter.lua</span></div>
+      <p class="why">Parsers for c, cpp, lua, cmake, python and rust, started per filetype. This is the <code>main</code> rewrite, not <code>master</code>: modules like <code>nvim-treesitter.locals</code> and <code>.query</code> do not exist, which rules out plugins that depend on them.</p>
+      <p class="caveat">Requires the <code>tree-sitter</code> CLI on the machine. Without it the install fails silently on every launch and the parser directory stays empty.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-treesitter-context</span><span class="plug-tag">plugins/treesitter.lua</span></div>
+      <p class="why">Pins the enclosing function and loop to the top of the window while scrolling. Capped at 3 lines and disabled under 20 rows, because the default is no limit.</p>
+      <dl class="keys">
+        <dt>[c</dt><dd>Jump to the enclosing scope</dd>
+      </dl>
+      <p class="caveat">In diff mode this falls through to the builtin previous-hunk, so diffview keeps working.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-surround</span><span class="plug-tag">no config</span></div>
+      <p class="why">Add, change and delete surrounding quotes and brackets.</p>
+      <dl class="keys">
+        <dt>ys</dt><dd>Add a surround</dd>
+        <dt>cs</dt><dd>Change a surround</dd>
+        <dt>ds</dt><dd>Delete a surround</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">mini.ai</span><span class="plug-tag">plugins/editor.lua</span></div>
+      <p class="why">Smarter text objects — <code>ci(</code> and <code>va,</code> work across lines and over treesitter nodes.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">conform.nvim</span><span class="plug-tag">plugins/format.lua</span></div>
+      <p class="why">Formatting through uncrustify for C and C++, reading <code>.uncrustify.cfg</code>. Trailing whitespace is highlighted and trimmed on write separately.</p>
+      <dl class="keys">
+        <dt>\uf</dt><dd>Format buffer or selection</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">vim-maximizer</span><span class="plug-tag">no config</span></div>
+      <p class="why">Zoom one split to full screen and back.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">bullets.vim</span> <span class="plug-name">vim-livedown</span><span class="plug-tag">no config</span></div>
+      <p class="why">Markdown list auto-numbering and live browser preview.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">gc</span> <span class="plug-name">gcc</span><span class="plug-tag">builtin since 0.10</span></div>
+      <p class="why">Commenting is not a plugin here. vim-commentary was dropped because Neovim ships the same operator, commentstring-aware.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Git</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">gitsigns.nvim</span><span class="plug-tag">plugins/git.lua</span></div>
+      <p class="why">Live markers for lines changed since HEAD, in the signcolumn, while you type. This is the always-on layer; diffview and neogit are windows you open.</p>
+      <dl class="keys">
+        <dt>]h &middot; [h</dt><dd>Next / previous uncommitted hunk</dd>
+        <dt>\gs &middot; \gr</dt><dd>Stage / reset the hunk under the cursor</dd>
+        <dt>\gS &middot; \gR</dt><dd>Stage / reset the whole buffer</dd>
+        <dt>\gv</dt><dd>Preview the hunk</dd>
+        <dt>\gb</dt><dd>Blame the current line, full commit</dd>
+        <dt>\gB</dt><dd>Toggle persistent blame virtual text</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">neogit</span><span class="plug-tag">plugins/git.lua</span></div>
+      <p class="why">Magit-style git UI, integrated with diffview and telescope. Staging happens here.</p>
+      <dl class="keys">
+        <dt>\gg</dt><dd>Status</dd>
+        <dt>\gC</dt><dd>Commit</dd>
+        <dt>\gp &middot; \gP</dt><dd>Push / pull</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">diffview.nvim</span><span class="plug-tag">plugins/git.lua</span></div>
+      <p class="why">Side-by-side diffs and file history.</p>
+      <dl class="keys">
+        <dt>\gd</dt><dd>Diff the working tree</dd>
+        <dt>\gh</dt><dd>History for this file</dd>
+        <dt>\gH</dt><dd>History for the repository</dd>
+        <dt>\gc</dt><dd>Close the diff view</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>Appearance</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">neovim-ayu</span><span class="plug-tag">plugins/colorscheme.lua</span></div>
+      <p class="why">Colorscheme, dark variant, with a custom <code>LineNr</code>. Its accent is the amber used throughout these pages.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">lualine.nvim</span><span class="plug-tag">plugins/ui.lua</span></div>
+      <p class="why">Statusline: mode, branch, diff, diagnostics, path, encoding, filetype, progress, position.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">which-key.nvim</span><span class="plug-tag">plugins/ui.lua</span></div>
+      <p class="why">Popup after one second showing the leader groups listed at the top of this page.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Core libraries</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">plenary.nvim</span><span class="plug-tag">dependency</span></div>
+      <p class="why">Async and utility library required by telescope, neogit and harpoon.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-nio</span><span class="plug-tag">dependency</span></div>
+      <p class="why">Async IO library required by nvim-dap-ui.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">nvim-web-devicons</span><span class="plug-tag">dependency</span></div>
+      <p class="why">Filetype icons for lualine, telescope and oil.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Agents</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">lua/agents.lua</span><span class="plug-tag">not a plugin</span></div>
+      <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a 33% bottom split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>; adding one is a new entry plus a <code>map(...)</code> line.</p>
+      <dl class="keys">
+        <dt>\cc &middot; \cC</dt><dd>claude model picker, plain / continue</dd>
+        <dt>\cr &middot; \cR</dt><dd>claude raw, plain / continue</dd>
+        <dt>\cv &middot; \cV</dt><dd>claude verbose, plain / continue</dd>
+        <dt>\cy &middot; \cY</dt><dd>claude skipping permissions, plain / continue</dd>
+        <dt>\ca</dt><dd>opencode model picker</dd>
+        <dt>\co &middot; \cO</dt><dd>opencode, plain / continue</dd>
+        <dt>\cp</dt><dd>Pick or focus a running agent</dd>
+      </dl>
+    </div>
+  </section>
+
+  <footer>shellbox/nvim &middot; 43 plugins &middot; vim.pack &middot; nvim 0.13.0-dev</footer>
+
+</div>
+</body>
+</html>

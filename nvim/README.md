@@ -44,6 +44,11 @@ sudo cmake --install neovim/build
 43 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
+Two HTML pages in `docs/` cover the same ground in more detail: `docs/plugins.html` is
+the full reference with every keymap, and `docs/changelog.html` is the dated log of
+config changes. Open them in a browser. When a plugin is added or removed, update the
+table below **and** `docs/plugins.html`; record the change in `docs/changelog.html`.
+
 ### Core / libraries
 
 | Plugin | Purpose |
