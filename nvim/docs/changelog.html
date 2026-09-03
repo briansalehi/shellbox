@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>d4f664b</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>046412c</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -274,6 +274,23 @@
     <div class="howto">
       <p>Add a new <code>section.release</code> directly below this box, above the previous newest entry. Its <b>heading is the ISO date</b>; one <code>div.entry</code> per commit, carrying the short sha, the subject, a tag, and one sentence on <b>why</b> it landed — the reason, not the diff.</p>
       <p>Tags are <b>option</b> for a vim setting, <b>plugin</b> for an addition, <b>removed</b>, and <b>fix</b>. Update the commit range chip in the header too. Full instructions sit in the HTML comment at the top of this file.</p>
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-03</h2>
+    <p class="rel-note">A third coding agent, wired through the same terminal engine as the other two.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">046412c</span>
+          <span class="subject">cursor-agent as a third agent</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">Cursor ships a terminal agent whose interface is the shape <code>lua/agents.lua</code> already expects: an argv, <code>--model</code>, <code>--continue</code>. So it needed no engine change, only a table entry and four keymaps. Its model picker is the plain form, label and <code>--model &lt;name&gt;</code> and nothing else, because cursor takes its instructions from <code>.cursor/rules</code> and <code>AGENTS.md</code> and so has no prompt flag to pair with a model.</p>
+      </div>
+
     </div>
   </section>
 
