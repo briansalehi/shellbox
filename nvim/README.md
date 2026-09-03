@@ -69,7 +69,7 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 
 | Plugin | Purpose |
 | --- | --- |
-| `telescope.nvim` + `telescope-fzf-native` | Fuzzy picker. `\ff` files, `\fg` grep, `\fb` buffers, `\fk` keymaps |
+| `telescope.nvim` + `telescope-fzf-native` | Fuzzy picker. `\ff` files, `\fg` grep, `\fb` buffers, `\fk` keymaps. fzf-native is a C library, so a `PackChanged` hook runs `make` for it on install and update |
 | `telescope-ui-select` | Routes every `vim.ui.select` through telescope, so long prompts get a fuzzy filter instead of a numbered cmdline list. No keymap of its own |
 | `harpoon` (v2) | Pin 4 files, jump with `\1`–`\4`. Faster than a picker for the files in flight |
 | `flash.nvim` | Jump anywhere on screen by typing a label (`\s`), or select treesitter nodes (`\S`) |

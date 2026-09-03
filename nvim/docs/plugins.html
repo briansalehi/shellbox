@@ -472,7 +472,7 @@
 
     <div class="plug">
       <div class="plug-head"><span class="plug-name">telescope.nvim</span> <span class="plug-name">telescope-fzf-native</span><span class="plug-tag">plugins/telescope.lua</span></div>
-      <p class="why">Fuzzy picker with the native fzf sorter compiled in.</p>
+      <p class="why">Fuzzy picker. The fzf sorter is a C library, so a <code>PackChanged</code> autocmd runs <code>make</code> for it on install and after every update, and <code>load_extension('fzf')</code> is what actually swaps it in for the file and generic sorters. Without that call the plugin sits installed and unused.</p>
       <dl class="keys">
         <dt>\ff</dt><dd>Find files</dd>
         <dt>\fg</dt><dd>Live grep</dd>
