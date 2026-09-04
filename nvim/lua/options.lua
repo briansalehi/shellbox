@@ -14,6 +14,16 @@ opt.shiftwidth = 4
 opt.signcolumn = "yes"
 opt.scrolloff = 8
 
+-- every float that does not set its own border gets one: lsp hover, signature
+-- help, diagnostics, telescope-ui-select. telescope, cmp and which-key set
+-- border="none" explicitly, so they are unaffected rather than double-bordered.
+opt.winborder = "rounded"
+
+-- the box-drawing characters are already nvim's defaults; these are the ones
+-- that are not: blank out the ~ tildes past the last line and the dots that
+-- pad foldtext, and hatch removed diff lines instead of filling them with -
+opt.fillchars = { eob = " ", fold = " ", diff = "\u{2571}" }
+
 vim.diagnostic.config({
     signs = {
         text = {
