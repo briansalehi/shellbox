@@ -19,6 +19,13 @@ opt.scrolloff = 8
 -- border="none" explicitly, so they are unaffected rather than double-bordered.
 opt.winborder = "rounded"
 
+-- one statusline for the whole editor instead of one per window: splitting no
+-- longer repeats the bar, and horizontal splits gain a separator line, which
+-- nvim only draws in this mode (it used the per-window statusline as the
+-- divider before). lualine reads laststatus at setup() and turns on
+-- globalstatus to match, so options must stay required before plugins.
+opt.laststatus = 3
+
 -- the box-drawing characters are already nvim's defaults; these are the ones
 -- that are not: blank out the ~ tildes past the last line and the dots that
 -- pad foldtext, and hatch removed diff lines instead of filling them with -
