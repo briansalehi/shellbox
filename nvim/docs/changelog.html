@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>a24736d</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>d845661</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -281,6 +281,15 @@
     <h2>2026-09-04</h2>
     <p class="rel-note">No new plugins, only display settings: the interface had edges and transitions it was not drawing.</p>
     <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">d845661</span>
+          <span class="subject">One statusline, not one per window</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Each window drew its own lualine bar, so a vertical split produced two half-width copies of the same rounded bar meeting at a seam in the middle of the row, and every extra window spent another line on it. <code>laststatus=3</code> draws the bar once across the full width. It also changes how stacked windows are divided: nvim used the upper window&rsquo;s statusline as the separator and now draws a real horizontal line in the <code>WinSeparator</code> grey instead of a coloured band. The cost is that the filename in <code>lualine_c</code> only ever describes the active window, so inactive splits carry no label. lualine reads <code>laststatus</code> during <code>setup()</code> to decide <code>globalstatus</code>, which is why <code>options</code> has to stay required before <code>plugins</code> in <code>init.lua</code>.</p>
+      </div>
 
       <div class="entry">
         <div class="entry-head">
