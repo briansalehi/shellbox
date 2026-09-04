@@ -13,7 +13,11 @@ require('lualine').setup({
     sections = {
         lualine_a = { 'mode' },
         lualine_b = { 'branch', 'diff', 'diagnostics' },
-        lualine_c = { { 'filename', path = 1 } },
+        -- the global statusline can only ever name the active window, so list
+        -- every window in the tab instead of the current filename: which files
+        -- are open and which one has focus, without spending a winbar line per
+        -- window. floats and the quickfix are excluded by the component.
+        lualine_c = { { 'windows', symbols = { alternate_file = '' } } },
         lualine_x = { 'encoding', 'fileformat', 'filetype' },
         lualine_y = { 'progress' },
         lualine_z = { 'location' },
