@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>c9b18cf</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>925ed12</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -274,6 +274,23 @@
     <div class="howto">
       <p>Add a new <code>section.release</code> directly below this box, above the previous newest entry. Its <b>heading is the ISO date</b>; one <code>div.entry</code> per commit, carrying the short sha, the subject, a tag, and one sentence on <b>why</b> it landed — the reason, not the diff.</p>
       <p>Tags are <b>option</b> for a vim setting, <b>plugin</b> for an addition, <b>removed</b>, and <b>fix</b>. Update the commit range chip in the header too. Full instructions sit in the HTML comment at the top of this file.</p>
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-04</h2>
+    <p class="rel-note">Three display settings, no new plugins: the interface had edges it was not drawing.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">925ed12</span>
+          <span class="subject">Borders on the floats, edges on the splits</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Any float that did not configure a border of its own rendered without one, so lsp hover, signature help and diagnostics ran straight into the buffer behind them while clangd&rsquo;s two floats were rounded. <code>winborder</code> is global, so a single option covers every one of them; telescope, cmp and which-key set <code>border="none"</code> on their own floats and keep it rather than gaining a second frame. Separately, ayu paints <code>WinSeparator</code> black against a near-black background, which meant splits had no visible line at all &mdash; it now takes <code>FloatBorder</code>&rsquo;s grey so split edges and float edges read as the same interface. <code>fillchars</code> keeps nvim&rsquo;s default box-drawing characters and changes only the three that are not: the <code>~</code> past the last line and the dots padding <code>foldtext</code> go blank, and removed diff lines are hatched instead of filled with dashes.</p>
+      </div>
+
     </div>
   </section>
 
