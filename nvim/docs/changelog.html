@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>925ed12</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>a24736d</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -279,8 +279,17 @@
 
   <section class="release">
     <h2>2026-09-04</h2>
-    <p class="rel-note">Three display settings, no new plugins: the interface had edges it was not drawing.</p>
+    <p class="rel-note">No new plugins, only display settings: the interface had edges and transitions it was not drawing.</p>
     <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">a24736d</span>
+          <span class="subject">Rounded caps on the statusline</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">The section separators were empty strings, so lualine&rsquo;s mode, branch, filetype and location blocks met as flat rectangles and every colour change read as a seam instead of a transition. They now use the powerline caps, and the component separators within a section trade the ASCII pipe for the thin variant of the same shape. Rounded rather than angled, so the statusline, the float borders and the split edges are all the same decision. The glyphs come from the nerd font that the diagnostic signs and devicons already require, so nothing new has to be installed.</p>
+      </div>
 
       <div class="entry">
         <div class="entry-head">
