@@ -2,8 +2,13 @@
 require('lualine').setup({
     options = {
         theme = 'auto',
-        component_separators = { left = '|', right = '|' },
-        section_separators   = { left = '', right = '' },
+        -- powerline separators, rounded to match the float and split borders.
+        -- 'left'/'right' name the half of the statusline, not the direction the
+        -- glyph points: sections on the left trail a right-bulging cap, ones on
+        -- the right lead with a left-bulging one. Needs the nerd font that the
+        -- diagnostic signs and devicons already rely on.
+        component_separators = { left = '\u{e0b1}', right = '\u{e0b3}' },
+        section_separators   = { left = '\u{e0b4}', right = '\u{e0b6}' },
     },
     sections = {
         lualine_a = { 'mode' },
