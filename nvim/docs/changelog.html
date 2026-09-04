@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>d845661</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>4426f1b</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -281,6 +281,15 @@
     <h2>2026-09-04</h2>
     <p class="rel-note">No new plugins, only display settings: the interface had edges and transitions it was not drawing.</p>
     <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">4426f1b</span>
+          <span class="subject">The statusline lists the tab&rsquo;s windows</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">One global statusline can only name the window that has focus, so the splits without focus were left unlabelled. The <code>windows</code> component lists every window in the tab and highlights the active one. The alternative was a <code>winbar</code> heading each window, but a winbar is drawn outside the text area &mdash; <code>winheight()</code> is documented as excluding it &mdash; so naming panes that way costs one buffer line per window, and this costs none. Filenames only rather than the relative path shown before, because several paths at once do not fit the width; <code>show_filename_only = false</code> reverses that. Floating windows and the quickfix are skipped by the component, so telescope and trouble never appear in the list.</p>
+      </div>
 
       <div class="entry">
         <div class="entry-head">
