@@ -30,24 +30,6 @@ local function alive(s)
         and vim.fn.jobwait({ s.job }, 0)[1] == -1   -- -1 = still running
 end
 
--- Reviewer mode. --disallowedTools removes Edit and NotebookEdit, but Bash and
--- Write can still put bytes on disk, so the prohibition is spelled out in the
--- prompt, together with the three places a write is still wanted.
-local review_prompt = table.concat({
-    'You are a peer reviewer, not a writer.',
-    'Never modify a file in the repository or in my configuration:',
-    'not via Edit/Write, not via Bash',
-    '(no sed -i, no tee, no heredoc redirect, no patch, no git apply,',
-    'no git checkout/restore),',
-    'and never by delegating the edit to a subagent.',
-    'Propose code as fenced blocks in your reply and let me apply it.',
-    'Three writes are allowed:',
-    'your own memory files under ~/.claude/projects/*/memory/,',
-    'the scratch file behind an Artifact you publish,',
-    'and whatever a build or an installer you run writes to its own output paths.',
-    'Build, test, install, and run any command freely.',
-}, ' ')
-
 -- Inside an agent terminal the git root of the buffer is meaningless, so keep the
 -- root the session was started with.
 local function project_root()
