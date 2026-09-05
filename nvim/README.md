@@ -147,6 +147,7 @@ one is a new entry plus a `map(...)` line.
 | `\cr` / `\cR` | claude raw, no model and no appended prompt, plain / continue |
 | `\cv` / `\cV` | claude, verbose / verbose and continue |
 | `\cy` / `\cY` | claude, skip permissions / skip permissions and continue |
+| `\cd` / `\cD` | claude reviewer, no editing tools, model picker, plain / continue |
 | `\ca` | opencode model picker |
 | `\co` / `\cO` | opencode, plain / continue last session |
 | `\cs` / `\cS` | cursor model picker, plain / continue last chat |
@@ -157,7 +158,13 @@ one is a new entry plus a `map(...)` line.
 Model pickers are per-agent, because each agent takes a system prompt through
 different flags and must never be offered each other's models. Claude lists
 `~/.config/models/claude/*.md` and launches
-`--model <name> --append-system-prompt-file <path>`. Opencode lists what
+`--model <name> --append-system-prompt-file <path>`. The reviewer under `\cd` is a
+separate agent rather than a claude variant, so a review and a working session stay
+alive side by side in one repository. It adds
+`--disallowedTools Edit Write NotebookEdit` and a prompt forbidding file writes
+through Bash as well, and because claude refuses `--append-system-prompt` together
+with `--append-system-prompt-file`, it inlines the picked model's prompt file and
+appends the review rules to that text. Opencode lists what
 `opencode models` reports (read once per session, it takes about a second) and
 launches `--model <provider/model>`; opencode has no prompt-file flag, so a prompt
 reaches it only as an agent definition in `~/.config/opencode/agent/*.md` whose

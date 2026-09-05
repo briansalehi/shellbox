@@ -8,14 +8,46 @@ local map = require('plugins.util').fn_map
 -- <model>. The flag must be --append-system-prompt-file: --append-system-prompt
 -- takes the prompt text itself, so handing it a path appends the path as a literal
 -- string. No shellescape: jobstart gets an argv list, not a shell.
-local function claude_models()
-    local dir = vim.fn.expand('~/.config/models/claude')
+local function claude_prompts()
     local out = {}
-    for _, file in ipairs(vim.fn.glob(dir .. '/*.md', true, true)) do
-        local model = vim.fn.fnamemodify(file, ':t:r')
+    for _, file in ipairs(vim.fn.glob(vim.fn.expand('~/.config/models/claude') .. '/*.md',
+        true, true)) do
+        table.insert(out, { model = vim.fn.fnamemodify(file, ':t:r'), file = file })
+    end
+    return out
+end
+
+local function claude_models()
+    local out = {}
+    for _, p in ipairs(claude_prompts()) do
         table.insert(out, {
-            label = model,
-            args  = { '--model', model, '--append-system-prompt-file', file },
+            label = p.model,
+            args  = { '--model', p.model, '--append-system-prompt-file', p.file },
+        })
+    end
+    return out
+end
+
+-- Reviewer mode. --disallowedTools removes the editing tools, but Bash can still
+-- write a file, so the prohibition is spelled out in the prompt as well.
+local review_prompt = table.concat({
+    'You are a peer reviewer, not a writer.',
+    'Never modify a file: not via Edit/Write, and not via Bash',
+    '(no sed -i, no tee, no heredoc redirect, no patch, no git apply,',
+    'no git checkout/restore).',
+    'Propose code as fenced blocks in your reply and let me apply it.',
+    'Build, test, and run any read-only command freely.',
+}, ' ')
+
+-- claude refuses --append-system-prompt together with --append-system-prompt-file,
+-- so the model's prompt file is inlined and the review rules appended to its text.
+local function claude_review_models()
+    local out = {}
+    for _, p in ipairs(claude_prompts()) do
+        local prompt = table.concat(vim.fn.readfile(p.file), '\n') .. '\n\n' .. review_prompt
+        table.insert(out, {
+            label = p.model,
+            args  = { '--model', p.model, '--append-system-prompt', prompt },
         })
     end
     return out
@@ -123,6 +155,17 @@ agents.setup({
             },
             models = claude_models,
         },
+        -- its own agent, not a claude variant, so a review session and a working
+        -- session stay alive side by side in the same repository
+        {
+            name = 'review',
+            cmd = 'claude',
+            args = { '--disallowedTools', 'Edit', 'Write', 'NotebookEdit' },
+            variants = {
+                continue = { '--continue' },
+            },
+            models = claude_review_models,
+        },
         {
             name = 'opencode',
             cmd = 'opencode',
@@ -162,6 +205,8 @@ map('<leader>cv', toggle('claude', 'verbose'),         'Agent: claude (verbose)'
 map('<leader>cV', toggle('claude', 'verboseContinue'), 'Agent: claude (verbose, continue)')
 map('<leader>cy', toggle('claude', 'yolo'),            'Agent: claude (skip permissions)')
 map('<leader>cY', toggle('claude', 'yoloContinue'),    'Agent: claude (skip permissions, continue)')
+map('<leader>cd', pick_model('review'),                 'Agent: claude review model (no edits)')
+map('<leader>cD', pick_model('review', 'continue'),    'Agent: claude review model (no edits, continue)')
 map('<leader>ca', pick_model('opencode'),              'Agent: opencode model')
 map('<leader>co', toggle('opencode'),                  'Agent: opencode')
 map('<leader>cO', toggle('opencode', 'continue'),      'Agent: opencode (continue)')

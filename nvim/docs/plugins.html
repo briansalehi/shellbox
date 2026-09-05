@@ -699,11 +699,13 @@
     <div class="plug">
       <div class="plug-head"><span class="plug-name">lua/agents.lua</span><span class="plug-tag">not a plugin</span></div>
       <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a 33% bottom split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>; adding one is a new entry plus a <code>map(...)</code> line.</p>
+      <p class="why">The reviewer behind <code>\cd</code> is a separate agent rather than a claude variant, precisely because sessions are keyed that way: as a variant it would reuse the claude already running in the repository and its flags would be dropped, so the keymap would silently hand back an agent that can still edit. It runs <code>claude</code> with <code>--disallowedTools Edit Write NotebookEdit</code>, which removes the editing tools from the process, plus a prompt closing the Bash routes to a write. Because claude refuses <code>--append-system-prompt</code> alongside <code>--append-system-prompt-file</code>, its picker inlines the chosen model&rsquo;s prompt file and appends the review rules to that text instead of passing the path.</p>
       <dl class="keys">
         <dt>\cc &middot; \cC</dt><dd>claude model picker, plain / continue</dd>
         <dt>\cr &middot; \cR</dt><dd>claude raw, plain / continue</dd>
         <dt>\cv &middot; \cV</dt><dd>claude verbose, plain / continue</dd>
         <dt>\cy &middot; \cY</dt><dd>claude skipping permissions, plain / continue</dd>
+        <dt>\cd &middot; \cD</dt><dd>claude reviewer, no editing tools, plain / continue</dd>
         <dt>\ca</dt><dd>opencode model picker</dd>
         <dt>\co &middot; \cO</dt><dd>opencode, plain / continue</dd>
         <dt>\cs &middot; \cS</dt><dd>cursor model picker, plain / continue</dd>
