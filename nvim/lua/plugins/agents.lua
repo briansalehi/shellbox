@@ -28,15 +28,22 @@ local function claude_models()
     return out
 end
 
--- Reviewer mode. --disallowedTools removes the editing tools, but Bash can still
--- write a file, so the prohibition is spelled out in the prompt as well.
+-- Reviewer mode. --disallowedTools removes Edit and NotebookEdit, but Bash and
+-- Write can still put bytes on disk, so the prohibition is spelled out in the
+-- prompt, together with the three places a write is still wanted.
 local review_prompt = table.concat({
     'You are a peer reviewer, not a writer.',
-    'Never modify a file: not via Edit/Write, and not via Bash',
+    'Never modify a file in the repository or in my configuration:',
+    'not via Edit/Write, not via Bash',
     '(no sed -i, no tee, no heredoc redirect, no patch, no git apply,',
-    'no git checkout/restore).',
+    'no git checkout/restore),',
+    'and never by delegating the edit to a subagent.',
     'Propose code as fenced blocks in your reply and let me apply it.',
-    'Build, test, and run any read-only command freely.',
+    'Three writes are allowed:',
+    'your own memory files under ~/.claude/projects/*/memory/,',
+    'the scratch file behind an Artifact you publish,',
+    'and whatever a build or an installer you run writes to its own output paths.',
+    'Build, test, install, and run any command freely.',
 }, ' ')
 
 -- claude refuses --append-system-prompt together with --append-system-prompt-file,
@@ -160,7 +167,7 @@ agents.setup({
         {
             name = 'review',
             cmd = 'claude',
-            args = { '--disallowedTools', 'Edit', 'Write', 'NotebookEdit' },
+            args = { '--disallowedTools', 'Edit', 'NotebookEdit' },
             variants = {
                 continue = { '--continue' },
             },

@@ -161,9 +161,12 @@ different flags and must never be offered each other's models. Claude lists
 `--model <name> --append-system-prompt-file <path>`. The reviewer under `\cd` is a
 separate agent rather than a claude variant, so a review and a working session stay
 alive side by side in one repository. It adds
-`--disallowedTools Edit Write NotebookEdit` and a prompt forbidding file writes
-through Bash as well, and because claude refuses `--append-system-prompt` together
-with `--append-system-prompt-file`, it inlines the picked model's prompt file and
+`--disallowedTools Edit NotebookEdit` and a prompt forbidding writes through Bash,
+Write, and subagents as well, carving out only its own memory files, artifact
+scratch files, and build or installer output. `Write` stays enabled because those
+carve-outs need it, and because Bash already makes the flag a hint rather than a
+guarantee. Because claude refuses `--append-system-prompt` together with
+`--append-system-prompt-file`, it inlines the picked model's prompt file and
 appends the review rules to that text. Opencode lists what
 `opencode models` reports (read once per session, it takes about a second) and
 launches `--model <provider/model>`; opencode has no prompt-file flag, so a prompt
