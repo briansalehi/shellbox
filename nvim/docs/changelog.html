@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>4426f1b</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>82f805a</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -274,6 +274,23 @@
     <div class="howto">
       <p>Add a new <code>section.release</code> directly below this box, above the previous newest entry. Its <b>heading is the ISO date</b>; one <code>div.entry</code> per commit, carrying the short sha, the subject, a tag, and one sentence on <b>why</b> it landed — the reason, not the diff.</p>
       <p>Tags are <b>option</b> for a vim setting, <b>plugin</b> for an addition, <b>removed</b>, and <b>fix</b>. Update the commit range chip in the header too. Full instructions sit in the HTML comment at the top of this file.</p>
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-05</h2>
+    <p class="rel-note">One addition: a claude that reads and reasons but cannot write.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">82f805a</span>
+          <span class="subject">A review-only claude agent</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">Reviewing a diff with the ordinary claude means an agent that answers by rewriting the file, so the review and the edit arrive together and there is nothing left to judge. <code>\cd</code> starts one with <code>--disallowedTools Edit Write NotebookEdit</code> &mdash; the tools are absent from that process, not merely discouraged &mdash; and an appended prompt that closes the Bash routes to the same result: <code>sed -i</code>, <code>tee</code>, heredoc redirect, <code>patch</code>, <code>git apply</code>, <code>git checkout/restore</code>. Builds, tests and every read-only command stay available, and code comes back in fenced blocks to apply by hand. It is a separate agent rather than a claude variant because sessions are keyed by <b>(agent, git root)</b>: as a variant, <code>\cd</code> in a repository already running claude would reveal that unrestricted session with its flags dropped. Its picker cannot pass <code>--append-system-prompt-file</code>, which claude refuses next to <code>--append-system-prompt</code>, so it reads the chosen model&rsquo;s prompt file and appends the review rules to that text instead.</p>
+      </div>
+
     </div>
   </section>
 
