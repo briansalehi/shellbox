@@ -104,6 +104,10 @@ export IDF_PATH="$HOME/.local/src/esp-idf"
 export IDF_TOOLS_PATH="$HOME/.espressif"
 alias source_idf="source $IDF_PATH/export.sh"
 
+# Boost
+export BOOST_ROOT=/usr/local
+export CPLUS_INCLUDE_PATH=/usr/local/include:$CPLUS_INCLUDE_PATH
+
 # nvm (node and npm installer)
 if [ -s /usr/share/nvim/init-nvim.sh ]
 then
