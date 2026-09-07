@@ -108,6 +108,9 @@ alias source_idf="source $IDF_PATH/export.sh"
 export BOOST_ROOT=/usr/local
 export CPLUS_INCLUDE_PATH=/usr/local/include:$CPLUS_INCLUDE_PATH
 
+# GDB
+unset DEBUGINFOD_URLS
+
 # nvm (node and npm installer)
 if [ -s /usr/share/nvim/init-nvim.sh ]
 then
