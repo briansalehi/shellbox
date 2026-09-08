@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>f8516cc</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>f133efe</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -279,8 +279,17 @@
 
   <section class="release">
     <h2>2026-09-08</h2>
-    <p class="rel-note">Valgrind reaches the quickfix list, its own report reaches the screen, and the statusline names windows by path again.</p>
+    <p class="rel-note">Valgrind reaches the quickfix list, its own report reaches the screen, the statusline names windows by path again, and the tabline stops resizing the agent terminals.</p>
     <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">f133efe</span>
+          <span class="subject">The tabline is always drawn, so opening neogit stops resizing terminals</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why">Every trip out to <code>\gg</code> and back left the agent terminal printing duplicate lines, clearable only with <code>&lt;M-r&gt;</code>. Neogit opens in a tabpage &mdash; <code>kind = &quot;tab&quot;</code> is its default and most of its views use it &mdash; and <code>showtabline</code> at the shipped 1 draws the tabline only once a second tabpage exists. So the tab appearing takes a row from every window on every tab: returning to the first one shrank the bottom split from 13 rows to 12, that resize reached the pty, and the agent&rsquo;s TUI reflowing to the new height is what duplicated the lines. Measured rather than reasoned about &mdash; a scratch nvim under a 40-row pty reported the split at 13 with one tab, still 13 while sitting in the second, and 12 on the way back. Setting the option to 2 spends the row whether or not a second tab is open, so no tabpage coming or going moves a window edge again; 0 would serve equally and spend nothing, and 1 is the only value that toggles, which is the entire defect. Redrawing the terminal from a <code>WinEnter</code> autocmd was the other candidate and was dropped: it repaints over the resize instead of removing it, and every other height change &mdash; a <code>:split</code>, a <code>:resize</code> &mdash; would still land.</p>
+      </div>
 
       <div class="entry">
         <div class="entry-head">
