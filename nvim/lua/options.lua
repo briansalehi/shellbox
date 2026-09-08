@@ -26,6 +26,14 @@ opt.winborder = "rounded"
 -- globalstatus to match, so options must stay required before plugins.
 opt.laststatus = 3
 
+-- always draw the tabline, even for a single tab. With the default 1 it appears
+-- the moment a second tabpage exists, which costs every window on every tab a
+-- row: opening neogit (kind = "tab") and coming back shrinks the agent terminal
+-- by one line, resizing its pty and making the TUI reflow into duplicate lines.
+-- A row that is always there never triggers a resize. Use 0 instead to hide the
+-- tabline entirely; what must not happen is toggling between the two.
+opt.showtabline = 2
+
 -- the box-drawing characters are already nvim's defaults; these are the ones
 -- that are not: blank out the ~ tildes past the last line and the dots that
 -- pad foldtext, and hatch removed diff lines instead of filling them with -
