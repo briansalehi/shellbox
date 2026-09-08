@@ -1,3 +1,32 @@
+local stl_escape = require('lualine.utils.utils').stl_escape
+
+-- cwd-relative path of an ordinary file buffer; nil for terminals, quickfix,
+-- help and unnamed buffers, which the windows component names itself.
+local function window_path(bufnr)
+    if vim.bo[bufnr].buftype ~= '' then
+        return nil
+    end
+    local file = vim.api.nvim_buf_get_name(bufnr)
+    if file == '' then
+        return nil
+    end
+    return vim.fn.fnamemodify(file, ':.')
+end
+
+-- do the full paths of every window in the tab still fit? Budgeted against the
+-- same two thirds of the screen the component keeps for itself before it starts
+-- dropping windows, plus the icon, padding and separator each one costs.
+local function window_paths_fit()
+    local width = 0
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        local path = window_path(vim.api.nvim_win_get_buf(win))
+        if path then
+            width = width + vim.fn.strchars(path) + 5
+        end
+    end
+    return width <= math.floor(2 * vim.o.columns / 3)
+end
+
 -- lualine
 require('lualine').setup({
     options = {
@@ -17,7 +46,25 @@ require('lualine').setup({
         -- every window in the tab instead of the current filename: which files
         -- are open and which one has focus, without spending a winbar line per
         -- window. floats and the quickfix are excluded by the component.
-        lualine_c = { { 'windows', symbols = { alternate_file = '' } } },
+        -- name each window by its path relative to the cwd, so two files with
+        -- the same basename stay apart. Full paths while they fit; past that
+        -- every window falls back to the component's own shortened form
+        -- (lua/plugins/ui.lua -> l/p/ui.lua), which is what
+        -- show_filename_only = false renders.
+        lualine_c = {
+            {
+                'windows',
+                show_filename_only = false,
+                symbols = { alternate_file = '' },
+                fmt = function(name, window)
+                    if not window_paths_fit() then
+                        return name
+                    end
+                    local path = window_path(window.bufnr)
+                    return path and stl_escape(path) or name
+                end,
+            },
+        },
         lualine_x = { 'encoding', 'fileformat', 'filetype' },
         lualine_y = { 'progress' },
         lualine_z = { 'location' },
