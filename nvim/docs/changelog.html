@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>pending</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>6b1a25a</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -279,16 +279,25 @@
 
   <section class="release">
     <h2>2026-09-08</h2>
-    <p class="rel-note">One addition: valgrind reaches the quickfix list instead of a scratch buffer.</p>
+    <p class="rel-note">Valgrind reaches the quickfix list, and its own report reaches the screen.</p>
     <div class="log">
 
       <div class="entry">
         <div class="entry-head">
-          <span class="sha">pending</span>
+          <span class="sha">6b1a25a</span>
+          <span class="subject">Read valgrind&rsquo;s own report instead of its XML</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why">The first cut parsed the XML, which meant the dense report valgrind actually prints &mdash; the format every tutorial and CI log speaks &mdash; was never visible. Both forms cannot be had from one run: <code>--xml=yes</code> replaces the text rather than duplicating it, and a <code>--log-file</code> alongside it comes back empty. So the text became the single artifact, shown verbatim by <code>\vr</code> and parsed for the quickfix from those same bytes. <code>--error-markers</code> has valgrind bracket each error itself and <code>--fullpath-after=</code> gives frames absolute paths, after which the indent carries the structure. The kind, stated only in prose, comes from a table taken out of memcheck&rsquo;s <code>mc_errors.c</code>. The XML parser was kept alongside during the swap and both were run over the same programs until they agreed on every entry, kind, stack shape, byte count and suppression across sixteen errors &mdash; which is what turned up <code>ReallocSizeZero</code>, and with it three kinds the published protocol does not list.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">ffd1ed9</span>
           <span class="subject">Memcheck into the quickfix list</span>
           <span class="tag t-add">plugin</span>
         </div>
-        <p class="why">Valgrind could only be run by hand in command mode, and its output read as text. <code>\vmm</code> now runs it on whatever launch target cmake-tools has selected and drops the errors into the quickfix list, where trouble and nvim-bqf already navigate and preview. It reads <code>--xml=yes</code> rather than the plain text on purpose: a leak&rsquo;s top frame is always valgrind&rsquo;s own <code>vg_replace_malloc.c</code>, so a text errorformat points every leak at valgrind rather than the line that allocated it, one logical error spreads over several lines with nothing linking them, and the error kind and leaked byte counts have no textual form at all. The XML carries all three, so each error is placed on the first stack frame that lies inside the project. <code>\vmt</code> reconstructs the full stack with the allocation site and, under <code>\vmo</code>, the origin of an uninitialised value; <code>\vmf</code> filters by error kind and <code>\vms</code> appends valgrind&rsquo;s own generated suppression to <code>valgrind.supp</code>. Because valgrind runs 20&ndash;50x slower than native, <code>\vs</code> calls a run off with SIGTERM, which valgrind treats as a normal shutdown &mdash; it writes a complete report on the way out, so a stopped run still delivers what it had found. <code>\v</code> is a namespace per tool so helgrind, DRD and the profilers have somewhere to land later; it is a Lua module rather than a plugin because the only living candidate, sanity.nvim, brings its own state, UI and picker layers, also covers clang sanitizers, and does not know about the cmake launch target.</p>
+        <p class="why">Valgrind could only be run by hand in command mode, and its output read as text. <code>\vmm</code> now runs it on whatever launch target cmake-tools has selected and drops the errors into the quickfix list, where trouble and nvim-bqf already navigate and preview. Valgrind&rsquo;s own report is the single artifact &mdash; <code>\vr</code> shows it verbatim and the quickfix is parsed from those same bytes &mdash; because only one form can be produced per run: <code>--xml=yes</code> replaces the text rather than duplicating it, and a <code>--log-file</code> alongside it comes back empty. <code>--error-markers</code> has valgrind bracket each error itself and <code>--fullpath-after=</code> gives frames absolute paths, after which the indent carries the structure. This is not vim&rsquo;s <code>errorformat</code>, which cannot do the job: a leak&rsquo;s top frame is always valgrind&rsquo;s own <code>vg_replace_malloc.c</code>, and errorformat has no way to walk down to the frame that is actually yours. The error kind, stated only in prose, comes from a table taken out of memcheck&rsquo;s <code>mc_errors.c</code>, where the kind and its wording are printed from the same switch. <code>\vmt</code> reconstructs the full stack with the allocation site and, under <code>\vmo</code>, the origin of an uninitialised value; <code>\vmf</code> filters by error kind and <code>\vms</code> appends valgrind&rsquo;s own generated suppression to <code>valgrind.supp</code>. The program&rsquo;s output opens on every run as a 33% bottom split, focus staying on the code, and is streamed into it as it arrives rather than collected at exit, because a target that runs until it is stopped &mdash; a server &mdash; would otherwise show nothing at all for as long as it ran. Because valgrind runs 20&ndash;50x slower than native, <code>\vs</code> calls a run off with SIGTERM, which valgrind treats as a normal shutdown &mdash; it writes the full report on the way out, so a stopped run still delivers what it had found. <code>\vx</code> clears away everything it opened &mdash; output, stack view, report and the quickfix window, the last only when valgrind is what filled it. <code>\v</code> is a namespace per tool so helgrind, DRD and the profilers have somewhere to land later; it is a Lua module rather than a plugin because the only living candidate, sanity.nvim, brings its own state, UI and picker layers, also covers clang sanitizers, and does not know about the cmake launch target.</p>
       </div>
 
     </div>
