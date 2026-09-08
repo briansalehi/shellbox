@@ -6,13 +6,14 @@ valgrind.setup({
     leak_kinds = 'definite,possible',
     track_origins = false,
     suppressions_file = 'valgrind.supp',
+    split_ratio = 0.33,
 })
 
 -- \v is a namespace per valgrind tool, so the tools that are not wired up yet
 -- have a home to go to: \vm memcheck, \vh helgrind, \vd drd, \vc callgrind,
 -- \vg cachegrind, \va massif, \vt dhat. Only memcheck exists today. \vs stops
--- whichever tool is running and \vp / \vx read whichever one ran last, so those
--- three stay at the top level.
+-- whichever tool is running, \vp / \vr read whichever one ran last and \vx closes
+-- what they opened, so those four stay at the top level.
 
 local function memcheck_args(leak_kinds)
     local args = {
@@ -52,7 +53,8 @@ map('<leader>vmS', valgrind.suppress_all,     'Memcheck: suppress every error')
 
 map('<leader>vs', valgrind.stop,        'Valgrind: stop the running tool')
 map('<leader>vp', valgrind.show_output, 'Valgrind: program output of last run')
-map('<leader>vx', valgrind.show_xml,    'Valgrind: raw output of last run')
+map('<leader>vr', valgrind.show_report, 'Valgrind: raw report of last run')
+map('<leader>vx', valgrind.close,       'Valgrind: close its windows')
 
 -- a run outliving nvim would keep the target process alive with it
 vim.api.nvim_create_autocmd('VimLeavePre', {

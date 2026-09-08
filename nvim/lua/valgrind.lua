@@ -1,11 +1,15 @@
 -- Valgrind runner.
 --
--- Not a plugin: the whole feature is a run, an XML parse and a quickfix list.
--- The plain-text output is not parsed on purpose. A leak's top frame is always
--- valgrind's own malloc interposer, so a text errorformat puts every leak in
--- vg_replace_malloc.c; one logical error also spreads over several lines with
--- nothing tying them together, and the error kind and leaked byte counts have
--- no textual form at all. --xml=yes carries all three.
+-- Not a plugin: the whole feature is a run, a parse of the report and a
+-- quickfix list. Valgrind's own text report is the single artifact -- it is
+-- what \vr shows verbatim and what the quickfix is built from, so the thing
+-- read and the thing parsed are the same bytes.
+--
+-- This is not vim's errorformat, which cannot do the job: it would put every
+-- leak in vg_replace_malloc.c, because valgrind's malloc interposer is always
+-- a leak's top frame and errorformat cannot walk down to the frame that is
+-- actually yours. Parsing the report here can, and does. See parse() below for
+-- the flags that make the text unambiguous.
 --
 -- lua/plugins/valgrind.lua holds the options and the keymaps.
 
@@ -16,11 +20,85 @@ M.opts = {
     leak_kinds = 'definite,possible',
     track_origins = false,          -- halves memcheck's speed, so off until asked for
     suppressions_file = 'valgrind.supp',
+    split_ratio = 0.33,             -- same share of the screen the agent terminals take
     extra_args = {},
 }
 
 function M.setup(opts)
     M.opts = vim.tbl_extend('force', M.opts, opts or {})
+end
+
+-- The program's output, streamed. vim.system only hands back stdout and stderr
+-- when the process exits, which never happens for a server or any other target
+-- that runs until it is stopped, so the chunks are collected as they arrive and
+-- kept in a buffer \vp can open at any point, during the run or after it.
+local out = { buf = nil, partial = '' }
+
+local function split_height()
+    return math.max(5, math.floor(vim.o.lines * M.opts.split_ratio))
+end
+
+local function output_buf()
+    if out.buf and vim.api.nvim_buf_is_valid(out.buf) then return out.buf end
+    out.buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[out.buf].bufhidden = 'hide'
+    vim.bo[out.buf].swapfile = false
+    vim.api.nvim_buf_set_name(out.buf, 'valgrind://output')
+    return out.buf
+end
+
+local function reset_output()
+    local buf = output_buf()
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '' })
+    vim.bo[buf].modifiable = false
+    out.partial = ''
+end
+
+local function append_output(chunk)
+    if chunk == nil or chunk == '' then return end
+    local buf = output_buf()
+
+    -- a chunk can split mid-line, so the tail is carried to the next one and
+    -- the buffer's last line is rewritten rather than appended to
+    local lines = vim.split(out.partial .. chunk, '\n', { plain = true })
+    out.partial = table.remove(lines)
+    lines[#lines + 1] = out.partial
+
+    local windows = vim.fn.win_findbuf(buf)
+    local at_end = {}
+    for _, win in ipairs(windows) do
+        at_end[win] = vim.api.nvim_win_get_cursor(win)[1] >= vim.api.nvim_buf_line_count(buf)
+    end
+
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, math.max(vim.api.nvim_buf_line_count(buf) - 1, 0), -1,
+        false, lines)
+    vim.bo[buf].modifiable = false
+
+    -- follow the tail, unless the reader has scrolled back to look at something
+    for _, win in ipairs(windows) do
+        if at_end[win] then
+            vim.api.nvim_win_set_cursor(win, { vim.api.nvim_buf_line_count(buf), 0 })
+        end
+    end
+end
+
+-- Returns the window showing the output, opening one if it is not up yet, plus
+-- the window that was current before. Reuses a visible one rather than stacking
+-- a second copy of the same buffer.
+local function open_output_win()
+    local buf = output_buf()
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+        return win, vim.api.nvim_get_current_win()
+    end
+
+    local prev = vim.api.nvim_get_current_win()
+    vim.cmd('botright split')
+    local win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(win, buf)
+    vim.api.nvim_win_set_height(win, split_height())
+    return win, prev
 end
 
 -- the run in flight, if any. Valgrind is 20-50x slower than native, so a run on
@@ -33,91 +111,169 @@ local last = {
     target = nil,
     errors = {},        -- every error of the run
     shown = {},         -- the errors currently in the quickfix list, in its order
-    xml_file = nil,
+    log_file = nil,
     output = nil,
     root = nil,
 }
 
--- XML --------------------------------------------------------------------
--- Valgrind's XML is written by its own printer and is uniformly shaped, so a
--- tag scanner is enough; nvim has no XML parser and the treesitter parser list
--- here is c/cpp/lua/cmake/python/rust.
+-- parsing ---------------------------------------------------------------
+-- Valgrind's own report is read rather than its XML. The two carry the same
+-- information -- the text has a leak_summary, a heap_summary and per-frame
+-- file and line just as the XML does -- but only one of them can be produced
+-- per run: --xml=yes replaces the text output, it does not duplicate it, and a
+-- --log-file given alongside it comes back empty. Reading the text means the
+-- report shown by \vr is valgrind's own words, which is the format every
+-- tutorial and CI log speaks, rather than something reconstructed from XML.
+--
+-- Three flags make it parseable without guesswork:
+--   --error-markers  valgrind brackets each error itself, so block boundaries
+--                    are not inferred from blank lines
+--   --fullpath-after= absolute paths in frames, so the quickfix can navigate
+--                    (this flag does nothing in XML mode; text is its purpose)
+--   --log-file       keeps the report out of the program's own output
+--
+-- After the ==pid== marker is removed the indent carries the structure: four
+-- spaces for a stack frame, two for a secondary description, one for the
+-- error's own message.
 
-local entities = { amp = '&', lt = '<', gt = '>', quot = '"', apos = "'" }
+-- Prose to error kind. memcheck prints the XML kind and this text from the same
+-- switch in its mc_errors.c, so the pairs below are taken from there; the text
+-- format is the only place the kind is not stated outright.
+local kind_patterns = {
+    { '^Invalid read of size',                          'InvalidRead' },
+    { '^Invalid write of size',                         'InvalidWrite' },
+    { '^Conditional jump or move depends',              'UninitCondition' },
+    { '^Use of uninitialised value of size',            'UninitValue' },
+    { '^Invalid free%(%)',                              'InvalidFree' },
+    { '^Mismatched free%(%)',                           'MismatchedFree' },
+    { '^Mismatched .* alignment alloc value',           'MismatchedAllocateDeallocateAlignment' },
+    { '^Mismatched .* size value',                      'MismatchedAllocateDeallocateSize' },
+    { '^Syscall param ',                                'SyscallParam' },
+    { '^Source and destination overlap',                'Overlap' },
+    { '^Jump to the invalid address',                   'InvalidJump' },
+    { "^Argument '.*' of function .* has a fishy",      'FishyValue' },
+    { '^Illegal memory pool address',                   'InvalidMemPool' },
+    { '^Invalid alignment value',                       'InvalidAlignment' },
+    { '^Invalid size value',                            'InvalidSizeAndAlignment' },
+    { '^Unsafe allocation with size of zero',           'InvalidSize' },
+    { '^%S+%(%) with size 0',                           'ReallocSizeZero' },
+    { 'byte%(%)s? found during client check request',   'ClientCheck' },
+    { 'contains unaddressable byte%(s%)',               'CoreMemError' },
+}
 
-local function unescape(s)
-    if s == nil then return nil end
-    s = s:gsub('&#(%d+);', function(n) return vim.fn.nr2char(tonumber(n)) end)
-    return (s:gsub('&(%a+);', function(e) return entities[e] or ('&' .. e .. ';') end))
-end
+local leak_kinds = {
+    ['definitely lost'] = 'Leak_DefinitelyLost',
+    ['indirectly lost'] = 'Leak_IndirectlyLost',
+    ['possibly lost']   = 'Leak_PossiblyLost',
+    ['still reachable'] = 'Leak_StillReachable',
+}
 
-local function tag(block, name)
-    return unescape(block:match('<' .. name .. '>(.-)</' .. name .. '>'))
-end
-
-local function parse_frame(block)
-    local dir, file = tag(block, 'dir'), tag(block, 'file')
-    local path
-    -- <file> is the basename and <dir> the absolute directory, even under
-    -- --fullpath-after=, which only changes the plain-text output.
-    if file then
-        path = (dir and dir ~= '') and (dir .. '/' .. file) or file
+local function classify(what)
+    for lost, kind in pairs(leak_kinds) do
+        if what:find(' are ' .. lost .. ' in ', 1, true) then return kind end
     end
-    return {
-        ip = tag(block, 'ip'),
-        fn = tag(block, 'fn'),
-        obj = tag(block, 'obj'),
-        file = path,
-        line = tonumber(tag(block, 'line')),
-    }
+    for _, rule in ipairs(kind_patterns) do
+        if what:match(rule[1]) then return rule[2] end
+    end
+    -- an unmapped message still gets an entry, labelled with its opening words
+    return what:match('^(%S+%s+%S+)') or 'Unknown'
 end
 
-local function parse_error(block)
-    local e = {}
-    e.kind = tag(block, 'kind')
+local function parse_frame(line)
+    --    at 0x4011A4: invalid_read (/path/main.c:15)
+    --    by 0x4847772: malloc (in /usr/lib/foo.so)
+    --    by 0x8048348: (within /path/a.out)
+    local lead, ip, rest = line:match('^%s+(%a%a)%s+0x(%x+):%s*(.*)$')
+    if ip == nil or (lead ~= 'at' and lead ~= 'by') then return nil end
 
-    -- leaks describe themselves in <xwhat>, everything else in <what>
-    local xwhat = block:match('<xwhat>(.-)</xwhat>')
-    e.what = xwhat and tag(xwhat, 'text') or tag(block, 'what')
-    if xwhat then
-        e.leaked_bytes = tag(xwhat, 'leakedbytes')
-        e.leaked_blocks = tag(xwhat, 'leakedblocks')
+    local frame = { ip = '0x' .. ip }
+    local fn, where = rest:match('^(.-)%s*%(([^()]*)%)%s*$')
+    if fn == nil then
+        frame.fn = rest
+        return frame
     end
+    if fn ~= '' then frame.fn = fn end
 
-    e.stacks = {}
-    for stack in block:gmatch('<stack>(.-)</stack>') do
-        local frames = {}
-        for frame in stack:gmatch('<frame>(.-)</frame>') do
-            frames[#frames + 1] = parse_frame(frame)
+    local obj = where:match('^in%s+(.*)$') or where:match('^within%s+(.*)$')
+    if obj then
+        frame.obj = obj
+    else
+        local file, lnum = where:match('^(.*):(%d+)$')
+        if file then
+            frame.file, frame.line = file, tonumber(lnum)
+        else
+            frame.obj = where
         end
-        e.stacks[#e.stacks + 1] = frames
     end
-
-    e.auxwhat = {}
-    for aux in block:gmatch('<auxwhat>(.-)</auxwhat>') do
-        e.auxwhat[#e.auxwhat + 1] = unescape(aux)
-    end
-
-    -- 3.27.1 repeats each suppression as a stray sibling after </error>;
-    -- scanning per error block takes the one inside and ignores the copy.
-    local supp = block:match('<suppression>(.-)</suppression>')
-    if supp then
-        local raw = supp:match('<rawtext>%s*<!%[CDATA%[(.-)%]%]>')
-        if raw then e.suppression = vim.trim(raw) end
-    end
-
-    return e
+    return frame
 end
 
-local function parse(xml)
+local function parse(log)
     local errors = {}
-    -- leak records are emitted after <status><state>FINISHED</state></status>,
-    -- so the whole document is scanned, not just the part before it
-    for block in xml:gmatch('<error>(.-)</error>') do
-        errors[#errors + 1] = parse_error(block)
+    local current, supp = nil, nil
+
+    for raw in (log .. '\n'):gmatch('(.-)\n') do
+        -- the suppression for an error follows its VGEND, unprefixed
+        if supp ~= nil then
+            supp[#supp + 1] = raw
+            if raw:match('^}') then
+                local e = errors[#errors]
+                if e then e.suppression = table.concat(supp, '\n') end
+                supp = nil
+            end
+            goto continue
+        end
+        if raw:match('^{%s*$') and #errors > 0 and errors[#errors].suppression == nil then
+            supp = { raw }
+            goto continue
+        end
+
+        -- keep the indent: it is what separates a frame from a description
+        local line = raw:match('^==%d+==(.*)$')
+        if line == nil then goto continue end
+        local marker = vim.trim(line)
+
+        if marker == 'VGBEGIN' then
+            current = { stacks = {}, auxwhat = {} }
+        elseif marker == 'VGEND' then
+            if current and current.what then errors[#errors + 1] = current end
+            current = nil
+        elseif current ~= nil then
+            local frame = parse_frame(line)
+            if frame then
+                if #current.stacks == 0 then current.stacks[1] = {} end
+                local stack = current.stacks[#current.stacks]
+                stack[#stack + 1] = frame
+            elseif line:match('^  %S') then
+                -- a secondary description, and the stack after it describes
+                -- that rather than the error: the allocation site, the origin
+                -- of an uninitialised value, the thread holding a lock
+                current.auxwhat[#current.auxwhat + 1] = marker
+                current.stacks[#current.stacks + 1] = {}
+            elseif marker ~= '' and current.what == nil then
+                current.what = marker
+                current.kind = classify(marker)
+                -- "168 (24 direct, 144 indirect) bytes in 1 blocks are ..."
+                -- states the total first, which is what the XML reported too
+                current.leaked_bytes = marker:match('^([%d,]+) %([%d,]+ direct')
+                    or marker:match('^([%d,]+) bytes in ')
+                if current.leaked_bytes then
+                    current.leaked_blocks = marker:match(' in ([%d,]+) blocks are ')
+                end
+            end
+        end
+        ::continue::
+    end
+
+    -- a description with no frames after it left an empty stack behind
+    for _, e in ipairs(errors) do
+        while #e.stacks > 0 and #e.stacks[#e.stacks] == 0 do
+            table.remove(e.stacks)
+        end
     end
     return errors
 end
+
 
 -- quickfix ---------------------------------------------------------------
 
@@ -203,8 +359,9 @@ local function launch_target()
     }
 end
 
--- tool: memcheck today; helgrind and drd emit the same XML protocol and can
--- reuse everything below by passing their own name and extra flags.
+-- tool: memcheck today. helgrind and drd print the same report shape -- marked
+-- errors, indented frames, indented descriptions -- so they can reuse
+-- everything below by passing their own name and extra flags.
 function M.run(tool, extra, opts)
     opts = opts or {}
     if vim.fn.executable('valgrind') == 0 then
@@ -221,12 +378,16 @@ function M.run(tool, extra, opts)
     local target = launch_target()
     if target == nil then return end
 
-    local xml_file = vim.fn.tempname() .. '.xml'
+    local log_file = vim.fn.tempname() .. '.valgrind'
     local argv = {
         'valgrind',
         '--tool=' .. tool,
-        '--xml=yes',
-        '--xml-file=' .. xml_file,
+        -- the report goes to its own file, so the program's output stays clean
+        '--log-file=' .. log_file,
+        -- valgrind brackets each error itself rather than leaving it to be guessed
+        '--error-markers=VGBEGIN,VGEND',
+        -- frames name a basename by default, which the quickfix cannot open
+        '--fullpath-after=',
         '--num-callers=' .. tostring(M.opts.num_callers),
         -- 'all' would stop and read a confirmation from stdin for every error
         '--gen-suppressions=all',
@@ -237,36 +398,59 @@ function M.run(tool, extra, opts)
     argv[#argv + 1] = target.exe
     vim.list_extend(argv, target.args)
 
-    vim.notify(('Valgrind: %s on %s'):format(tool, target.name))
+    -- a target that runs until it is stopped reports nothing until then, so say
+    -- up front where its output is and how to end the run
+    vim.notify(('Valgrind: %s on %s — \\vp for output, \\vs to stop')
+        :format(tool, target.name))
 
-    local handle = vim.system(argv, { cwd = target.cwd, text = true }, vim.schedule_wrap(function(res)
+    reset_output()
+
+    -- up on every run: a target that runs until it is stopped has nothing else
+    -- to show for itself. Focus stays where it was, so the run does not
+    -- interrupt whatever is being edited.
+    local _, prev = open_output_win()
+    if vim.api.nvim_win_is_valid(prev) then vim.api.nvim_set_current_win(prev) end
+
+    last.tool = tool
+    last.target = target.name
+    last.log_file = log_file
+    last.root = project_root()
+    last.output = ''
+    last.errors, last.shown = {}, {}
+
+    local function stream(_, chunk)
+        if chunk == nil then return end
+        last.output = last.output .. chunk
+        vim.schedule(function() append_output(chunk) end)
+    end
+
+    local handle = vim.system(argv, {
+        cwd = target.cwd,
+        text = true,
+        stdout = stream,
+        stderr = stream,
+    }, vim.schedule_wrap(function(res)
         local stopped = running ~= nil and running.stopped
         running = nil
 
-        local xml = ''
-        if vim.fn.filereadable(xml_file) == 1 then
-            xml = table.concat(vim.fn.readfile(xml_file), '\n')
+        local log = ''
+        if vim.fn.filereadable(log_file) == 1 then
+            log = table.concat(vim.fn.readfile(log_file), '\n')
         end
 
-        last.tool = tool
-        last.target = target.name
-        last.xml_file = xml_file
-        last.root = project_root()
-        last.output = (res.stdout or '') .. (res.stderr or '')
-
-        if xml == '' then
+        if log == '' then
             -- a run stopped before valgrind got as far as writing anything
             local msg = stopped and 'Valgrind: stopped, nothing reported yet'
-                or ('Valgrind: produced no XML (exit ' .. tostring(res.code) ..
+                or ('Valgrind: wrote no report (exit ' .. tostring(res.code) ..
                     '), see \\vp for its output')
             vim.notify(msg, stopped and vim.log.levels.WARN or vim.log.levels.ERROR)
             last.errors, last.shown = {}, {}
             return
         end
 
-        -- SIGTERM still leaves a complete document behind, so a stopped run
-        -- keeps whatever valgrind had found by then
-        last.errors = parse(xml)
+        -- SIGTERM is a normal shutdown for valgrind: it still runs its exit
+        -- path and writes the full report, so a stopped run keeps its findings
+        last.errors = parse(log)
         last.shown = last.errors
         local how = stopped and ' (stopped)' or ''
         if #last.errors == 0 then
@@ -287,8 +471,8 @@ function M.run(tool, extra, opts)
 end
 
 -- Stop the run in flight. Valgrind treats SIGTERM as a normal shutdown: it runs
--- its exit path and writes a complete XML document, so the errors it had already
--- found still reach the quickfix list.
+-- its exit path and writes the full report, so the errors it had already found
+-- still reach the quickfix list.
 function M.stop()
     if running == nil then
         vim.notify('Valgrind: nothing is running', vim.log.levels.WARN)
@@ -318,16 +502,31 @@ end
 
 -- viewers ----------------------------------------------------------------
 
-local function scratch(name, lines, filetype)
-    vim.cmd('botright new')
-    local buf = vim.api.nvim_get_current_buf()
+-- One window per view, rewritten in place. Pressing \vmt on a second error
+-- should replace the stack on screen, not put another pane below it.
+local function scratch(name, lines)
+    local buf = vim.fn.bufnr(name)
+    if buf == -1 or not vim.api.nvim_buf_is_valid(buf) then
+        buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[buf].buftype = 'nofile'
+        vim.bo[buf].bufhidden = 'hide'
+        vim.bo[buf].swapfile = false
+        vim.api.nvim_buf_set_name(buf, name)
+    end
+
+    vim.bo[buf].modifiable = true
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    vim.bo[buf].buftype = 'nofile'
-    vim.bo[buf].bufhidden = 'wipe'
-    vim.bo[buf].swapfile = false
     vim.bo[buf].modifiable = false
-    if filetype then vim.bo[buf].filetype = filetype end
-    vim.api.nvim_buf_set_name(buf, name)
+
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+        vim.api.nvim_set_current_win(win)
+        vim.api.nvim_win_set_cursor(win, { 1, 0 })
+        return
+    end
+
+    vim.cmd('botright split')
+    vim.api.nvim_win_set_buf(0, buf)
+    vim.api.nvim_win_set_height(0, split_height())
 end
 
 local function has_run()
@@ -353,24 +552,73 @@ local function current_error()
     return e
 end
 
+-- Opens the live buffer, so it works while the run is still going; a target
+-- that never exits on its own is the normal case for this.
 function M.show_output()
     if not has_run() then return end
-    local out = last.output or ''
-    if vim.trim(out) == '' then
-        vim.notify('Valgrind: the program produced no output')
-        return
-    end
-    scratch('valgrind://output', vim.split(out, '\n', { plain = true }))
+    local win = open_output_win()
+    vim.api.nvim_set_current_win(win)
+    vim.api.nvim_win_set_cursor(win, { vim.api.nvim_buf_line_count(output_buf()), 0 })
 end
 
-function M.show_xml()
+-- Closes what this feature opened: the output, the stack view, the raw report
+-- and the quickfix list if valgrind is what filled it. The output buffer itself
+-- is kept, so \vp reopens the same scrollback rather than an empty pane.
+function M.close()
+    local closed = 0
+
+    for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.api.nvim_win_is_valid(win) then
+            local buf = vim.api.nvim_win_get_buf(win)
+            local name = vim.api.nvim_buf_get_name(buf)
+            local ours = name:match('^valgrind://') ~= nil
+                or (last.log_file ~= nil and name == last.log_file)
+            -- never close the last window of a tab out from under the user
+            local tab = vim.api.nvim_win_get_tabpage(win)
+            if ours and #vim.api.nvim_tabpage_list_wins(tab) > 1 then
+                vim.api.nvim_win_close(win, false)
+                closed = closed + 1
+            end
+        end
+    end
+
+    if vim.fn.getqflist({ title = 0 }).title:match('^valgrind ') then
+        for _, w in ipairs(vim.fn.getwininfo()) do
+            if w.quickfix == 1 and w.loclist == 0 then
+                vim.cmd('cclose')
+                closed = closed + 1
+                break
+            end
+        end
+    end
+
+    if closed == 0 then
+        vim.notify('Valgrind: nothing open to close')
+    end
+end
+
+-- Valgrind's own report, as it printed it. Re-read on every open, so during a
+-- long run it shows what has accumulated rather than a stale copy.
+function M.show_report()
     if not has_run() then return end
-    if last.xml_file == nil or vim.fn.filereadable(last.xml_file) == 0 then
-        vim.notify('Valgrind: the raw output file is gone', vim.log.levels.WARN)
+    if last.log_file == nil or vim.fn.filereadable(last.log_file) == 0 then
+        vim.notify('Valgrind: no report written yet', vim.log.levels.WARN)
         return
     end
-    vim.cmd('botright split ' .. vim.fn.fnameescape(last.xml_file))
-    vim.bo.filetype = 'xml'
+    -- reuse the window it is already in rather than stacking another copy
+    local buf = vim.fn.bufnr(last.log_file)
+    if buf ~= -1 then
+        for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+            vim.api.nvim_set_current_win(win)
+            vim.cmd('edit')     -- the run may have written more since
+            return
+        end
+    end
+
+    vim.cmd('botright split ' .. vim.fn.fnameescape(last.log_file))
+    vim.api.nvim_win_set_height(0, split_height())
+    vim.cmd('edit')
+    vim.bo.filetype = 'valgrind'
 end
 
 -- The full error: every stack, with the auxwhat lines that separate them. This

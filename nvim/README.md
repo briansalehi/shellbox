@@ -135,26 +135,38 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 
 ## Valgrind
 
-Valgrind is not a plugin either. `lua/valgrind.lua` runs it, parses its XML and
-fills the quickfix list; `lua/plugins/valgrind.lua` holds the options and the
+Valgrind is not a plugin either. `lua/valgrind.lua` runs it, parses its report
+and fills the quickfix list; `lua/plugins/valgrind.lua` holds the options and the
 keymaps. It takes the binary, its arguments and its working directory straight
 from cmake-tools' launch target, so there is nothing to configure per project —
 pick a target with `\mL` and run.
 
-The plain-text output is deliberately not parsed. A leak's top frame is always
-valgrind's own `vg_replace_malloc.c`, so a text errorformat points every leak at
-valgrind instead of your code; one logical error also spreads over several lines
-with nothing linking them, and the error kind and leaked byte counts have no
-textual form at all. `--xml=yes` carries all three, so the run walks the XML and
-picks the first stack frame that lies inside the project — which is what puts a
-leak on the line that allocated it.
+Valgrind's own text report is the single artifact: it is what `\vr` shows
+verbatim and what the quickfix is built from, so the thing read and the thing
+parsed are the same bytes. Only one form can be produced per run — `--xml=yes`
+*replaces* the text rather than duplicating it, and a `--log-file` given
+alongside comes back empty — and the text is the one worth having, because it is
+the format every tutorial and CI log speaks.
+
+Three flags make it unambiguous: `--error-markers` has valgrind bracket each
+error itself, `--fullpath-after=` gives absolute paths so the quickfix can
+navigate, and `--log-file` keeps the report out of the program's own output.
+After the `==pid==` marker the indent carries the structure — four spaces for a
+frame, two for a secondary description, one for the message.
+
+This is not vim's `errorformat`, which cannot do the job: a leak's top frame is
+always valgrind's own `vg_replace_malloc.c`, and errorformat has no way to walk
+down to the frame that is actually yours. Parsing the report here does, which is
+what puts a leak on the line that allocated it. The error kind, which the text
+states only in prose, comes from a table taken out of memcheck's `mc_errors.c`,
+where the kind and its wording are printed from the same switch.
 
 `\v` is a namespace per valgrind tool, so the rest have somewhere to go:
 `\vm` memcheck, `\vh` helgrind, `\vd` drd, `\vc` callgrind, `\vg` cachegrind,
 `\va` massif, `\vt` dhat. Only memcheck is wired up. `\vs` stops whichever tool
-is running and `\vp` / `\vx` read whichever one ran last, so those three sit at
-the top level. Helgrind and DRD emit the
-same XML protocol, so the filter, stack and suppression functions already take
+is running, `\vp` / `\vr` read whichever one ran last and `\vx` closes what they
+opened, so those four sit at the top level. Helgrind and DRD emit the
+report shape, so the filter, stack and suppression functions already take
 the tool as an argument and will serve them unchanged.
 
 | Keymap | Action |
@@ -167,8 +179,18 @@ the tool as an argument and will serve them unchanged.
 | `\vmt` | Full stack of the error under the cursor: every frame, plus the allocation site and the origin stack under their own headings |
 | `\vms` / `\vmS` | Append valgrind's generated suppression for this error, or for every error listed, to `valgrind.supp` |
 | `\vs` | Stop the run in flight |
-| `\vp` | The program's own output from the last run |
-| `\vx` | The raw XML from the last run |
+| `\vp` | Focus the output pane |
+| `\vr` | Valgrind's own report, as it printed it |
+| `\vx` | Close the windows valgrind opened |
+
+The output pane opens on every run, as a 33% bottom split — the share the agent
+terminals take — and focus stays on the code, so starting a run does not interrupt
+what is being edited. `\vp` focuses it later. The program's output is streamed
+into it as it arrives and follows the tail unless you have scrolled back. The
+stack view and the raw report open the same size. This matters for a target that never exits on its own — a
+server, say: valgrind reports nothing until the process ends, so without live
+output such a run looks like it has done nothing at all. The way to use one is to
+start it, exercise it, then `\vs`.
 
 Valgrind runs 20-50x slower than native, so a run is long enough to want calling
 off: `\vs` sends it SIGTERM, which valgrind treats as a normal shutdown — it
@@ -176,6 +198,17 @@ writes a complete report on the way out, so the errors found so far still reach
 the quickfix list, titled `(stopped)`. A second run will not start over the top of
 one already going, and a run still in flight is stopped when nvim quits rather
 than left holding the target process open.
+
+Each view owns one window. Pressing `\vp`, `\vr` or `\vmt` again focuses the
+window it is already in rather than stacking another copy — `\vmt` on a second
+error replaces the stack on screen, and `\vr` re-reads the report so a run still
+going shows what it has written since.
+
+`\vx` clears the workspace in one key: the output, the stack view, the raw report
+and the quickfix window, but only when valgrind is what filled the quickfix — a
+list from anywhere else is left alone. It closes the quickfix *window* and not the
+list, so `\qo` brings the same errors back, and it keeps the output buffer so
+`\vp` reopens the same scrollback rather than an empty pane.
 
 Errors land in the quickfix list rather than a window of their own, so `\xq`
 opens them in trouble and nvim-bqf previews each one in place. Still-reachable
