@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>6b1a25a</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>f8516cc</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -279,8 +279,17 @@
 
   <section class="release">
     <h2>2026-09-08</h2>
-    <p class="rel-note">Valgrind reaches the quickfix list, and its own report reaches the screen.</p>
+    <p class="rel-note">Valgrind reaches the quickfix list, its own report reaches the screen, and the statusline names windows by path again.</p>
     <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">f8516cc</span>
+          <span class="subject">Window names carry their path, shortened only when it does not fit</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">The <code>windows</code> component names each window by its basename, so the several <code>init.lua</code>, <code>CMakeLists.txt</code> and <code>main.cpp</code> a C++ tree holds all read the same and the list says which files are open without saying which ones. It now names them by the path relative to the cwd. The earlier objection &mdash; that several paths at once do not fit the width &mdash; is answered by measuring instead of assuming: a <code>fmt</code> function sums the full paths of the tab&rsquo;s windows against the two thirds of the screen the component already reserves for itself, and hands back the full path while the set fits. Past that every window falls to the one-letter-per-directory form <code>show_filename_only = false</code> renders anyway, <code>lua/plugins/ui.lua</code> becoming <code>l/p/ui.lua</code>, which is still the path and still disambiguates. Shortening all of them together rather than each on its own keeps the row in one form, and it degrades a step before the component starts dropping windows off the ends into an ellipsis. Terminals, quickfix, help and unnamed buffers are left alone &mdash; their <code>buftype</code> is not empty and the component already names them &lsquo;Quickfix List&rsquo; or by their shell.</p>
+      </div>
 
       <div class="entry">
         <div class="entry-head">
@@ -331,7 +340,7 @@
           <span class="subject">The statusline lists the tab&rsquo;s windows</span>
           <span class="tag t-set">option</span>
         </div>
-        <p class="why">One global statusline can only name the window that has focus, so the splits without focus were left unlabelled. The <code>windows</code> component lists every window in the tab and highlights the active one. The alternative was a <code>winbar</code> heading each window, but a winbar is drawn outside the text area &mdash; <code>winheight()</code> is documented as excluding it &mdash; so naming panes that way costs one buffer line per window, and this costs none. Filenames only rather than the relative path shown before, because several paths at once do not fit the width; <code>show_filename_only = false</code> reverses that. Floating windows and the quickfix are skipped by the component, so telescope and trouble never appear in the list.</p>
+        <p class="why">One global statusline can only name the window that has focus, so the splits without focus were left unlabelled. The <code>windows</code> component lists every window in the tab and highlights the active one. The alternative was a <code>winbar</code> heading each window, but a winbar is drawn outside the text area &mdash; <code>winheight()</code> is documented as excluding it &mdash; so naming panes that way costs one buffer line per window, and this costs none. Filenames only rather than the relative path shown before, on the assumption that several paths at once do not fit the width &mdash; an assumption <code>f8516cc</code> later measured and reversed. Floating windows and the quickfix are skipped by the component, so telescope and trouble never appear in the list.</p>
       </div>
 
       <div class="entry">
