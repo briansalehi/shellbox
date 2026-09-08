@@ -42,4 +42,6 @@ wk.add({
     { '<leader>r', group = 'refactor' },
     { '<leader>x', group = 'trouble' },
     { '<leader>q', group = 'quickfix' },
+    { '<leader>v', group = 'valgrind' },
+    { '<leader>vm', group = 'memcheck' },
 })

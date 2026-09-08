@@ -133,6 +133,60 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 | `diffview.nvim` | Side-by-side diffs and file history, `\gd` / `\gh` |
 | `gitsigns.nvim` | Live `+`/`~`/`-` markers for uncommitted lines. `]h` / `[h` walk hunks, `\gs` / `\gr` stage or reset one, `\gv` preview, `\gb` blame the line |
 
+## Valgrind
+
+Valgrind is not a plugin either. `lua/valgrind.lua` runs it, parses its XML and
+fills the quickfix list; `lua/plugins/valgrind.lua` holds the options and the
+keymaps. It takes the binary, its arguments and its working directory straight
+from cmake-tools' launch target, so there is nothing to configure per project —
+pick a target with `\mL` and run.
+
+The plain-text output is deliberately not parsed. A leak's top frame is always
+valgrind's own `vg_replace_malloc.c`, so a text errorformat points every leak at
+valgrind instead of your code; one logical error also spreads over several lines
+with nothing linking them, and the error kind and leaked byte counts have no
+textual form at all. `--xml=yes` carries all three, so the run walks the XML and
+picks the first stack frame that lies inside the project — which is what puts a
+leak on the line that allocated it.
+
+`\v` is a namespace per valgrind tool, so the rest have somewhere to go:
+`\vm` memcheck, `\vh` helgrind, `\vd` drd, `\vc` callgrind, `\vg` cachegrind,
+`\va` massif, `\vt` dhat. Only memcheck is wired up. `\vs` stops whichever tool
+is running and `\vp` / `\vx` read whichever one ran last, so those three sit at
+the top level. Helgrind and DRD emit the
+same XML protocol, so the filter, stack and suppression functions already take
+the tool as an argument and will serve them unchanged.
+
+| Keymap | Action |
+| --- | --- |
+| `\vmm` | Run memcheck on the launch target, errors into the quickfix list |
+| `\vmb` | Build first, then run — valgrind never builds, so on its own it happily measures a stale binary |
+| `\vml` | Run showing every leak kind, reachable and indirect included |
+| `\vmo` | Toggle `--track-origins`, which says where an uninitialised value came from. Off by default: it halves memcheck's speed and costs at least 100MB |
+| `\vmf` | Filter the list down to one error kind, or back to all |
+| `\vmt` | Full stack of the error under the cursor: every frame, plus the allocation site and the origin stack under their own headings |
+| `\vms` / `\vmS` | Append valgrind's generated suppression for this error, or for every error listed, to `valgrind.supp` |
+| `\vs` | Stop the run in flight |
+| `\vp` | The program's own output from the last run |
+| `\vx` | The raw XML from the last run |
+
+Valgrind runs 20-50x slower than native, so a run is long enough to want calling
+off: `\vs` sends it SIGTERM, which valgrind treats as a normal shutdown — it
+writes a complete report on the way out, so the errors found so far still reach
+the quickfix list, titled `(stopped)`. A second run will not start over the top of
+one already going, and a run still in flight is stopped when nvim quits rather
+than left holding the target process open.
+
+Errors land in the quickfix list rather than a window of their own, so `\xq`
+opens them in trouble and nvim-bqf previews each one in place. Still-reachable
+blocks are marked `W` rather than `E`, since they are reported for information.
+Suppressions are generated with `--gen-suppressions=all`; the `yes` form stops
+and reads a confirmation from stdin for every error, which no editor job can
+answer.
+
+Saved logs get the `valgrind` filetype from a small autocmd on `*.valgrind` and
+`valgrind*.log` — nvim ships `syntax/valgrind.vim` but no ftdetect for it.
+
 ## Agents
 
 Coding agents are not a plugin. `lua/agents.lua` runs them as plain

@@ -10,6 +10,10 @@
 -- 'ultisnips' -- conflicts with luasnip
 -- 'vim-snippets' -- useless, required by ultisnips
 -- 'vim-cmake' -- conflicts with cmake-tools
+-- 'sanity.nvim' -- valgrind XML to quickfix, but 150KB with its own state/UI/picker layer,
+--                 also covers clang sanitizers, and does not know cmake-tools' launch target
+-- 'valgrind.vim' (alkino) -- drives valgrind through vim's python 2 interface, which nvim has never had
+-- 'valgrind.vim' (vim-scripts) -- 2003 script, no quickfix, and its file resolver is an empty stub
 -- 'vim-cpp-enhanced-highlight' -- conflicts with treesitter
 -- 'gitdiff' -- replaced by diffview
 -- 'tagbar' -- never configured, trouble's document symbols covers it
@@ -79,4 +83,5 @@ require('plugins.format')
 require('plugins.navigation')
 require('plugins.diagnostics')
 require('plugins.editor')
+require('plugins.valgrind')
 require('plugins.agents')

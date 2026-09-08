@@ -304,6 +304,8 @@
       <div class="grp"><b>\r</b><span>refactor</span></div>
       <div class="grp"><b>\x</b><span>trouble</span></div>
       <div class="grp"><b>\q</b><span>quickfix</span></div>
+      <div class="grp"><b>\v</b><span>valgrind</span></div>
+      <div class="grp"><b>\vm</b><span>memcheck</span></div>
     </div>
   </section>
 
@@ -694,6 +696,28 @@
   </section>
 
   <section>
+    <h2>Valgrind</h2>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">lua/valgrind.lua</span><span class="plug-tag">not a plugin</span></div>
+      <p class="why">Runs valgrind, parses its XML and fills the quickfix list. The binary, its arguments and its working directory come from cmake-tools&rsquo; launch target, so there is nothing to configure per project &mdash; pick a target with <code>\mL</code> and run. Options and keymaps live in <code>lua/plugins/valgrind.lua</code>.</p>
+      <p class="why">The plain-text output is deliberately not parsed. A leak&rsquo;s top frame is always valgrind&rsquo;s own <code>vg_replace_malloc.c</code>, so a text errorformat points every leak at valgrind instead of your code; one logical error also spreads over several lines with nothing linking them, and the error kind and leaked byte counts have no textual form at all. <code>--xml=yes</code> carries all three, so the run walks the XML and picks the first stack frame inside the project &mdash; which is what puts a leak on the line that allocated it.</p>
+      <p class="why"><code>\v</code> is a namespace per valgrind tool, so the rest have somewhere to go: <code>\vm</code> memcheck, <code>\vh</code> helgrind, <code>\vd</code> drd, <code>\vc</code> callgrind, <code>\vg</code> cachegrind, <code>\va</code> massif, <code>\vt</code> dhat. Only memcheck is wired up; helgrind and DRD emit the same XML protocol, so the filter, stack and suppression functions already take the tool as an argument. <code>\vs</code> stops whichever tool is running and <code>\vp</code> / <code>\vx</code> read whichever one ran last, so those three sit at the top level.</p>
+      <p class="why">Valgrind runs 20&ndash;50x slower than native, so a run is long enough to want calling off. <code>\vs</code> sends SIGTERM, which valgrind treats as a normal shutdown: it writes a complete report on the way out, so the errors found so far still reach the quickfix list, titled <code>(stopped)</code>. A second run will not start over the top of one already going, and a run still in flight is stopped when nvim quits rather than left holding the target process open.</p>
+      <dl class="keys">
+        <dt>\vmm</dt><dd>Run memcheck on the launch target</dd>
+        <dt>\vmb</dt><dd>Build first, then run &mdash; valgrind never builds</dd>
+        <dt>\vml</dt><dd>Run showing every leak kind, reachable included</dd>
+        <dt>\vmo</dt><dd>Toggle --track-origins; off by default, it halves memcheck&rsquo;s speed</dd>
+        <dt>\vmf</dt><dd>Filter the list to one error kind, or back to all</dd>
+        <dt>\vmt</dt><dd>Full stack of this error, with allocation site and origin</dd>
+        <dt>\vms &middot; \vmS</dt><dd>Append the generated suppression for this error / every error listed</dd>
+        <dt>\vs</dt><dd>Stop the run in flight; what it found so far still lands</dd>
+        <dt>\vp</dt><dd>The program&rsquo;s own output from the last run</dd>
+        <dt>\vx</dt><dd>The raw XML from the last run</dd>
+      </dl>
+    </div>
+
     <h2>Agents</h2>
 
     <div class="plug">

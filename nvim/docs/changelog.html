@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>82f805a</b> &middot; master</div>
+    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>pending</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -274,6 +274,23 @@
     <div class="howto">
       <p>Add a new <code>section.release</code> directly below this box, above the previous newest entry. Its <b>heading is the ISO date</b>; one <code>div.entry</code> per commit, carrying the short sha, the subject, a tag, and one sentence on <b>why</b> it landed — the reason, not the diff.</p>
       <p>Tags are <b>option</b> for a vim setting, <b>plugin</b> for an addition, <b>removed</b>, and <b>fix</b>. Update the commit range chip in the header too. Full instructions sit in the HTML comment at the top of this file.</p>
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-08</h2>
+    <p class="rel-note">One addition: valgrind reaches the quickfix list instead of a scratch buffer.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">pending</span>
+          <span class="subject">Memcheck into the quickfix list</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">Valgrind could only be run by hand in command mode, and its output read as text. <code>\vmm</code> now runs it on whatever launch target cmake-tools has selected and drops the errors into the quickfix list, where trouble and nvim-bqf already navigate and preview. It reads <code>--xml=yes</code> rather than the plain text on purpose: a leak&rsquo;s top frame is always valgrind&rsquo;s own <code>vg_replace_malloc.c</code>, so a text errorformat points every leak at valgrind rather than the line that allocated it, one logical error spreads over several lines with nothing linking them, and the error kind and leaked byte counts have no textual form at all. The XML carries all three, so each error is placed on the first stack frame that lies inside the project. <code>\vmt</code> reconstructs the full stack with the allocation site and, under <code>\vmo</code>, the origin of an uninitialised value; <code>\vmf</code> filters by error kind and <code>\vms</code> appends valgrind&rsquo;s own generated suppression to <code>valgrind.supp</code>. Because valgrind runs 20&ndash;50x slower than native, <code>\vs</code> calls a run off with SIGTERM, which valgrind treats as a normal shutdown &mdash; it writes a complete report on the way out, so a stopped run still delivers what it had found. <code>\v</code> is a namespace per tool so helgrind, DRD and the profilers have somewhere to land later; it is a Lua module rather than a plugin because the only living candidate, sanity.nvim, brings its own state, UI and picker layers, also covers clang sanitizers, and does not know about the cmake launch target.</p>
+      </div>
+
     </div>
   </section>
 
