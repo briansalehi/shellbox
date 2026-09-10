@@ -123,7 +123,7 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 | `nvim-dap-virtual-text` | Variable values shown at end of line while stepping, changed ones highlighted |
 | `trouble.nvim` | Diagnostics, references, and symbols in a navigable list (`\x*`) |
 | `todo-comments.nvim` | Highlights TODO/FIXME/HACK. `\xt` lists them in trouble, `]t` / `[t` jump |
-| `nvim-bqf` | Preview pane in the native quickfix window, so `\mb` build errors and `gr` references can be read in context while scrolling the list |
+| `nvim-bqf` | Preview pane in the native quickfix window, so `\mb` build errors and `grr` references can be read in context while scrolling the list |
 
 ### Git
 
