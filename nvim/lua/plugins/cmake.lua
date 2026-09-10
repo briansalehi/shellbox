@@ -211,6 +211,9 @@ vim.keymap.set('n', '<leader>mw', function()
     end
     if vim.fn.confirm('Remove build directory?\n' .. dir, '&Yes\n&No', 2) == 1 then
         vim.fn.delete(dir, 'rf')
+        -- confirm() leaves its prompt on the cmdline; without clearing it the
+        -- notification below overflows and asks for a hit-enter
+        vim.cmd('redraw')
         vim.notify('CMake: removed ' .. dir)
     end
 end, { desc = 'CMake: remove build dir' })
