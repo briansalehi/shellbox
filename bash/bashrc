@@ -74,7 +74,7 @@ export GPG_TTY=$(tty)
 # Default editor for system
 export EDITOR=$(type -p nvim)
 # Less colors for man pages
-export PAGER='/usr/bin/less -S'
+export PAGER='/usr/bin/less'
 # Begin blinking
 export LESS_TERMCAP_mb=$(tput bold; tput setaf 1)
 # Begin bold
