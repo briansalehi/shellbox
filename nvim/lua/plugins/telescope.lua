@@ -1,11 +1,12 @@
 -- telescope
 require('telescope').setup({
-  defaults = {
-    file_ignore_patterns = { 'build/', '.git/', '.idea/' },
-  },
   pickers = {
+      -- ignore patterns live here rather than in defaults so they only filter
+      -- file search: a build-dir file that is already open must still show up
+      -- in the buffers picker
       find_files = {
           hidden = true,
+          file_ignore_patterns = { 'build/', '.git/', '.idea/' },
       },
       buffers = {
           mappings = {
