@@ -6,7 +6,7 @@ require('diffview').setup()
 map('<leader>gd', 'DiffviewOpen',          'Git: diff working tree')
 map('<leader>gh', 'DiffviewFileHistory %', 'Git: file history')
 map('<leader>gH', 'DiffviewFileHistory',   'Git: repo history')
-map('<leader>gc', 'DiffviewClose',         'Git: close')
+map('<leader>gx', 'DiffviewClose',         'Git: close')
 
 -- neogit
 require('neogit').setup({

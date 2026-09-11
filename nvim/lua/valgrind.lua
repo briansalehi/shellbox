@@ -38,6 +38,14 @@ local function split_height()
     return math.max(5, math.floor(vim.o.lines * M.opts.split_ratio))
 end
 
+-- Keeps the quickfix jump out of a pane. With 'switchbuf' containing
+-- "uselast" (the default) <CR> in the quickfix window opens the file in the
+-- previously used window, whatever it shows, so after \vp the source would
+-- land on top of the program output. Quickfix skips 'winfixbuf' windows.
+local function pin(win)
+    vim.wo[win].winfixbuf = true
+end
+
 local function output_buf()
     if out.buf and vim.api.nvim_buf_is_valid(out.buf) then return out.buf end
     out.buf = vim.api.nvim_create_buf(false, true)
@@ -98,6 +106,7 @@ local function open_output_win()
     local win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(win, buf)
     vim.api.nvim_win_set_height(win, split_height())
+    pin(win)
     return win, prev
 end
 
@@ -527,6 +536,7 @@ local function scratch(name, lines)
     vim.cmd('botright split')
     vim.api.nvim_win_set_buf(0, buf)
     vim.api.nvim_win_set_height(0, split_height())
+    pin(0)
 end
 
 local function has_run()
@@ -617,6 +627,7 @@ function M.show_report()
 
     vim.cmd('botright split ' .. vim.fn.fnameescape(last.log_file))
     vim.api.nvim_win_set_height(0, split_height())
+    pin(0)
     vim.cmd('edit')
     vim.bo.filetype = 'valgrind'
 end

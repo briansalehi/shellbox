@@ -28,7 +28,7 @@ vim.keymap.set('n', '[t', function() require('todo-comments').jump_prev() end, {
 
 -- quickfix
 map('<leader>qo', 'copen',  'Quickfix: open')
-map('<leader>qc', 'cclose', 'Quickfix: close')
+map('<leader>qx', 'cclose', 'Quickfix: close')
 map('<leader>qf', 'cfirst', 'Quickfix: first')
 map('<leader>ql', 'clast',  'Quickfix: last')
 map('<leader>qn', 'cnext',  'Quickfix: next')
