@@ -14,6 +14,20 @@ require('neogit').setup({
 })
 
 map('<leader>gg', 'Neogit',        'Git: status (stage here)')
+
+-- Neogit hardcodes nowrap on its status window and re-applies it on every
+-- render, so a FileType autocmd is overridden. NeogitStatusRefreshed fires
+-- after each render, which is the earliest point the setting sticks.
+vim.api.nvim_create_autocmd('User', {
+    pattern = 'NeogitStatusRefreshed',
+    callback = function()
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+            if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == 'NeogitStatus' then
+                vim.wo[win].wrap = true
+            end
+        end
+    end,
+})
 map('<leader>gC', 'Neogit commit', 'Git: commit')
 map('<leader>gp', 'Neogit push',   'Git: push')
 map('<leader>gP', 'Neogit pull',   'Git: pull')
