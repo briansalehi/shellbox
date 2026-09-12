@@ -69,6 +69,28 @@ require('lualine').setup({
         lualine_y = { 'progress' },
         lualine_z = { 'location' },
     },
+    -- take over the tabline (showtabline = 2 keeps it drawn) from nvim's
+    -- default, which always abbreviates directories (l/p/ui.lua) and turns
+    -- agent://claude/shellbox into a//c/shellbox. Name each tab by its current
+    -- buffer's full cwd-relative path; tab_max_length = 0 disables lualine's
+    -- own abbreviation. lualine names every terminal after $SHELL, so agent
+    -- terminals fall back to their agent:// buffer name instead.
+    tabline = {
+        lualine_a = {
+            {
+                'tabs',
+                mode = 1,
+                path = 1,
+                tab_max_length = 0,
+                fmt = function(name, tab)
+                    if tab.buftype == 'terminal' and not vim.startswith(tab.file, 'term://') then
+                        return tab.file
+                    end
+                    return name
+                end,
+            },
+        },
+    },
 })
 
 -- which-key: group labels
