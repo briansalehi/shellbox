@@ -111,6 +111,9 @@ export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUD
 # GDB
 unset DEBUGINFOD_URLS
 
+# Man
+export MANPAGER='nvim +Man!'
+
 # nvm (node and npm installer)
 if [ -s /usr/share/nvim/init-nvim.sh ]
 then
