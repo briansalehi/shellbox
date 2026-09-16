@@ -129,7 +129,13 @@ include_path "$HOME/.cargo"
 include_path "$HOME/.local"
 include_path "$HOME/.opencode"
 
-command -v tmux &>/dev/null && [ -z "$TMUX" ] && [ -z "$NVIM" ] && [ -z "$TERMINAL_EMULATOR" ] && [ -z "$SSH_CONNECTION" ] && tmux
+# start tmux only on a real local login: a virtual console or a fresh shell in a graphical session
+if command -v tmux &>/dev/null && [ -z "$TMUX" ] && [ -z "$NVIM" ]; then
+    case "$(tty 2>/dev/null)" in
+        /dev/tty[0-9]*) tmux ;;
+        *) [ -n "$DISPLAY$WAYLAND_DISPLAY" ] && [ -z "$TERMINAL_EMULATOR" ] && [ -z "$SSH_CONNECTION" ] && tmux ;;
+    esac
+fi
 
 alias poweroff="(sleep 0.5 && poweroff); kill $(pgrep tmux | xargs)"
 alias reboot="(sleep 0.5 && reboot); kill $(pgrep tmux | xargs)"
