@@ -10,4 +10,4 @@ require('ayu').setup({
     }, -- A dictionary of group names, each associated with a dictionary of parameters (`bg`, `fg`, `sp` and `style`) and colors in hex.
 })
 
-vim.cmd('colorscheme ayu')
+vim.cmd('colorscheme cyberdream')

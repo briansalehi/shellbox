@@ -17,6 +17,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
     local buf = args.buf
     local map = vim.keymap.set
 
+    -- keep treesitter as the only source of syntax colors; semantic tokens
+    -- repaint part of the buffer once the server attaches
+    client.server_capabilities.semanticTokensProvider = nil
+
     -- key mapping
     map("n", "gd", vim.lsp.buf.definition,     { buffer = buf, desc = "Go to definition" })
     map("n", "gD", vim.lsp.buf.declaration,    { buffer = buf, desc = "Go to declaration" })

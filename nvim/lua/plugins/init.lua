@@ -22,8 +22,10 @@
 -- 'vim-airline' -- replaced by lualine
 
 vim.pack.add({
-    'https://github.com/folke/which-key.nvim',
+    'https://github.com/scottmckendry/cyberdream.nvim',
+    'https://github.com/bluz71/vim-moonfly-colors',
     'https://github.com/Shatur/neovim-ayu',
+    'https://github.com/folke/which-key.nvim',
     'https://github.com/nvim-lua/plenary.nvim',
     'https://github.com/nvim-tree/nvim-web-devicons',
     'https://github.com/nvim-telescope/telescope-fzf-native.nvim',
