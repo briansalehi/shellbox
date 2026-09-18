@@ -50,7 +50,30 @@ vim.diagnostic.config({
     },
     -- signs alone meant reading a diagnostic needed gl; virtual_lines renders
     -- the message under the cursor's line only, so the rest stays uncluttered
-    virtual_lines = { current_line = true },
+    virtual_lines = {
+        current_line = true,
+        -- virt_lines never wrap, but the renderer splits the message on \n into
+        -- indented continuation lines, so wrap it by hand at the window width
+        format = function(d)
+            local msg = d.code and string.format("%s: %s", d.code, d.message) or d.message
+            local width = vim.api.nvim_win_get_width(0) - vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].textoff - d.col - 8
+            if width < 20 then width = 20 end
+            local out = {}
+            for line in msg:gmatch("[^\n]+") do
+                local cur = ""
+                for word in line:gmatch("%S+") do
+                    if cur ~= "" and #cur + 1 + #word > width then
+                        table.insert(out, cur)
+                        cur = word
+                    else
+                        cur = cur == "" and word or cur .. " " .. word
+                    end
+                end
+                if cur ~= "" then table.insert(out, cur) end
+            end
+            return table.concat(out, "\n")
+        end,
+    },
 })
 opt.updatetime = 250
 opt.completeopt = "menu,noselect"
