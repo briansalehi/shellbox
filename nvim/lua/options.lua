@@ -39,6 +39,77 @@ opt.showtabline = 2
 -- pad foldtext, and hatch removed diff lines instead of filling them with -
 opt.fillchars = { eob = " ", fold = " ", diff = "\u{2571}" }
 
+-- Diagnostic messages under the cursor's line. The built-in virtual_lines
+-- handler indents continuation lines to the diagnostic's column, so a long
+-- message runs off the right edge; this handler wraps at the window width
+-- and starts continuation lines at column 0.
+local wrapped_ns = vim.api.nvim_create_namespace("wrapped_diagnostic_lines")
+local wrapped_hl = {
+    [vim.diagnostic.severity.ERROR] = "DiagnosticVirtualLinesError",
+    [vim.diagnostic.severity.WARN]  = "DiagnosticVirtualLinesWarn",
+    [vim.diagnostic.severity.INFO]  = "DiagnosticVirtualLinesInfo",
+    [vim.diagnostic.severity.HINT]  = "DiagnosticVirtualLinesHint",
+}
+
+local function wrap_words(text, first_width, width)
+    local out, cur, limit = {}, "", first_width
+    for word in text:gmatch("%S+") do
+        if cur ~= "" and vim.fn.strdisplaywidth(cur .. " " .. word) > limit then
+            table.insert(out, cur)
+            cur, limit = word, width
+        else
+            cur = cur == "" and word or cur .. " " .. word
+        end
+    end
+    if cur ~= "" then table.insert(out, cur) end
+    return out
+end
+
+local function render_wrapped(bufnr)
+    vim.api.nvim_buf_clear_namespace(bufnr, wrapped_ns, 0, -1)
+    local win = vim.fn.bufwinid(bufnr)
+    if win == -1 then return end
+    local width = vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff
+    local lnum = vim.api.nvim_win_get_cursor(win)[1] - 1
+    local virt_lines = {}
+    for _, d in ipairs(vim.diagnostic.get(bufnr, { lnum = lnum })) do
+        local hl = wrapped_hl[d.severity]
+        local msg = d.code and string.format("%s: %s", d.code, d.message) or d.message
+        local prefix = string.rep(" ", d.col) .. "\u{2514}\u{2500}\u{2500}\u{2500}\u{2500} "
+        local first = math.max(width - vim.fn.strdisplaywidth(prefix), 20)
+        for para in msg:gmatch("[^\n]+") do
+            for _, line in ipairs(wrap_words(para, first, math.max(width, 20))) do
+                if prefix then
+                    table.insert(virt_lines, { { prefix, hl }, { line, hl } })
+                    prefix = nil
+                else
+                    table.insert(virt_lines, { { line, hl } })
+                end
+            end
+        end
+    end
+    if #virt_lines > 0 then
+        vim.api.nvim_buf_set_extmark(bufnr, wrapped_ns, lnum, 0, { virt_lines = virt_lines })
+    end
+end
+
+local wrapped_group = vim.api.nvim_create_augroup("wrapped_diagnostic_lines", {})
+vim.diagnostic.handlers.wrapped_lines = {
+    show = function(_, bufnr)
+        vim.api.nvim_clear_autocmds({ group = wrapped_group, buffer = bufnr })
+        vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "WinResized" }, {
+            group = wrapped_group,
+            buffer = bufnr,
+            callback = function() render_wrapped(bufnr) end,
+        })
+        render_wrapped(bufnr)
+    end,
+    hide = function(_, bufnr)
+        vim.api.nvim_clear_autocmds({ group = wrapped_group, buffer = bufnr })
+        vim.api.nvim_buf_clear_namespace(bufnr, wrapped_ns, 0, -1)
+    end,
+}
+
 vim.diagnostic.config({
     signs = {
         text = {
@@ -48,32 +119,8 @@ vim.diagnostic.config({
             [vim.diagnostic.severity.HINT]  = "\u{F0EB}",
         },
     },
-    -- signs alone meant reading a diagnostic needed gl; virtual_lines renders
-    -- the message under the cursor's line only, so the rest stays uncluttered
-    virtual_lines = {
-        current_line = true,
-        -- virt_lines never wrap, but the renderer splits the message on \n into
-        -- indented continuation lines, so wrap it by hand at the window width
-        format = function(d)
-            local msg = d.code and string.format("%s: %s", d.code, d.message) or d.message
-            local width = vim.api.nvim_win_get_width(0) - vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].textoff - d.col - 8
-            if width < 20 then width = 20 end
-            local out = {}
-            for line in msg:gmatch("[^\n]+") do
-                local cur = ""
-                for word in line:gmatch("%S+") do
-                    if cur ~= "" and #cur + 1 + #word > width then
-                        table.insert(out, cur)
-                        cur = word
-                    else
-                        cur = cur == "" and word or cur .. " " .. word
-                    end
-                end
-                if cur ~= "" then table.insert(out, cur) end
-            end
-            return table.concat(out, "\n")
-        end,
-    },
+    virtual_lines = false,
+    wrapped_lines = true,
 })
 opt.updatetime = 250
 opt.completeopt = "menu,noselect"
