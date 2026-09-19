@@ -21,7 +21,7 @@ local function claude_models()
     for _, p in ipairs(claude_prompts()) do
         table.insert(out, {
             label = p.model,
-            args  = { '--model', p.model, '--append-system-prompt-file', p.file },
+            args  = { '--remote-control', '--model', p.model, '--append-system-prompt-file', p.file },
         })
     end
     return out
@@ -205,15 +205,13 @@ end
 
 map('<leader>cc', pick_model('claude'),                'Agent: claude model')
 map('<leader>cC', pick_model('claude', 'continue'),    'Agent: claude model (continue)')
--- no --model and no --append-system-prompt-file: claude's own default model, and
--- /model inside the session to reach any other one
 map('<leader>cr', toggle('claude'),                    'Agent: claude (raw)')
 map('<leader>cR', toggle('claude', 'continue'),        'Agent: claude (raw, continue)')
 map('<leader>cv', toggle('claude', 'verbose'),         'Agent: claude (verbose)')
 map('<leader>cV', toggle('claude', 'verboseContinue'), 'Agent: claude (verbose, continue)')
 map('<leader>cy', toggle('claude', 'yolo'),            'Agent: claude (skip permissions)')
 map('<leader>cY', toggle('claude', 'yoloContinue'),    'Agent: claude (skip permissions, continue)')
-map('<leader>cd', pick_model('review'),                 'Agent: claude review model (no edits)')
+map('<leader>cd', pick_model('review'),                'Agent: claude review model (no edits)')
 map('<leader>cD', pick_model('review', 'continue'),    'Agent: claude review model (no edits, continue)')
 map('<leader>ca', pick_model('opencode'),              'Agent: opencode model')
 map('<leader>co', toggle('opencode'),                  'Agent: opencode')
