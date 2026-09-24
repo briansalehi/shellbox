@@ -159,6 +159,12 @@ local function setup_buffer_keymaps(s)
     end
     vim.keymap.set('t', '<leader>cc', function() M.hide(s.agent.name) end,
         { buffer = s.buf, desc = 'Agent: hide' })
+    -- an agent on the alternate screen leaves no scrollback in the buffer, so
+    -- normal-mode scrolling has to be forwarded to the agent as its own keys
+    for lhs, bytes in pairs(s.agent.normal_keys or {}) do
+        vim.keymap.set('n', lhs, function() vim.fn.chansend(s.job, bytes) end,
+            { buffer = s.buf, desc = 'Agent: send ' .. lhs })
+    end
 end
 
 local function build_argv(agent, extra)
@@ -397,6 +403,14 @@ function M.pick_model(name, opts)
         prompt = agent.name .. ' model:',
         format_item = function(i) return i.label end,
     }, function(choice) if choice then go(choice) end end)
+end
+
+-- Called over RPC by scripts/remote-edit.lua, an agent's $VISUAL. The buffer is
+-- wiped on close, which is what the script waits for.
+function M.edit(file)
+    vim.cmd('stopinsert')
+    vim.cmd.tabedit(vim.fn.fnameescape(file))
+    vim.bo.bufhidden = 'wipe'
 end
 
 -- A clean exit takes the window and buffer with it; a crash keeps the buffer so the

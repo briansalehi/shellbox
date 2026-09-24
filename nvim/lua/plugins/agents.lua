@@ -177,6 +177,16 @@ agents.setup({
         {
             name = 'opencode',
             cmd = 'opencode',
+            -- opencode splits $VISUAL on spaces and runs it without a shell
+            env = {
+                VISUAL = 'nvim --clean -l '
+                    .. vim.fn.stdpath('config') .. '/scripts/remote-edit.lua',
+            },
+            -- full-screen TUI: no scrollback in the buffer, so page opencode itself
+            normal_keys = {
+                ['<C-u>'] = '\27[5~',   -- PageUp
+                ['<C-d>'] = '\27[6~',   -- PageDown
+            },
             variants = {
                 continue = { '--continue' },
                 fork     = { '--continue', '--fork' },

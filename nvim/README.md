@@ -268,3 +268,11 @@ so it has no prompt flag to pair with a model.
 Opening or toggling an agent lands in insert mode, but nothing re-enters insert on
 `WinEnter`, so leaving with `<C-\><C-n>` and switching windows keeps the scrollback
 position.
+
+Opencode is a full-screen app on the terminal's alternate screen, so its buffer
+holds only the visible screen and no scrollback. In its normal mode `<C-u>`/`<C-d>`
+send `PageUp`/`PageDown` to opencode, which then pages its own history; visual
+select and yank work on whatever is on screen. For the whole transcript, opencode's
+export (`ctrl+x x`) and prompt editor (`ctrl+x e`) run `$VISUAL`, which the agent
+sets to `scripts/remote-edit.lua`: the file opens in a new tab of this nvim, and
+opencode resumes once that buffer is closed.
