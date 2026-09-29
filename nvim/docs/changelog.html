@@ -262,7 +262,7 @@
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Changelog</h1>
     <p class="lede">Every change to this Neovim config, newest first, with the reason it landed. Companion to the plugin reference.</p>
-    <div class="range">latest &middot; <b>ae86c43</b> &rarr; <b>f133efe</b> &middot; master</div>
+    <div class="range">latest &middot; <b>f133efe</b> &rarr; <b>a0a8164</b> &middot; master</div>
     <nav class="nav">
       <a href="./plugins.html">Plugin reference &rarr;</a>
       <span>../README.md for setup</span>
@@ -274,6 +274,198 @@
     <div class="howto">
       <p>Add a new <code>section.release</code> directly below this box, above the previous newest entry. Its <b>heading is the ISO date</b>; one <code>div.entry</code> per commit, carrying the short sha, the subject, a tag, and one sentence on <b>why</b> it landed — the reason, not the diff.</p>
       <p>Tags are <b>option</b> for a vim setting, <b>plugin</b> for an addition, <b>removed</b>, and <b>fix</b>. Update the commit range chip in the header too. Full instructions sit in the HTML comment at the top of this file.</p>
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-24</h2>
+    <p class="rel-note">Opencode becomes readable past its visible screen, and the reviewer&rsquo;s proposals say where they land.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">a0a8164</span>
+          <span class="subject">Scroll and export opencode from its full-screen terminal</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Opencode draws on the terminal&rsquo;s alternate screen, so its buffer holds only what is visible and nvim&rsquo;s own scrolling has nothing to move through. An agent entry can now carry <code>normal_keys</code>, bytes sent to the job from normal mode, and opencode maps <code>&lt;C-u&gt;</code>/<code>&lt;C-d&gt;</code> to PageUp/PageDown so it pages its own history. For the whole transcript, opencode&rsquo;s export and prompt editor run <code>$VISUAL</code>, which is set to <code>scripts/remote-edit.lua</code>: it opens the file over RPC in a new tab of the nvim that owns the terminal and polls until that buffer is wiped, because opencode reads the file back and deletes it as soon as the editor exits and nvim has no <code>--remote-wait</code>.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">a33f31c</span>
+          <span class="subject">The review prompt says what hunk lines address</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">The diff format asked for in <code>5d2e0bb</code> named <code>@@</code> hunk lines without saying what they are for. The prompt now states that they address where the change applies, so a proposal carries its location rather than leaving it to be inferred from context lines.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-19</h2>
+    <p class="rel-note">Long diagnostics fit the window, and claude sessions can be followed remotely.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">be38d35</span>
+          <span class="subject">Remote control on by default for claude</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">The claude model picker now launches with <code>--remote-control</code>, so a session started from nvim can be followed from another device without restarting it. The reviewer and the raw variants are unchanged.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">e3bd34d</span>
+          <span class="subject">Wrapped diagnostic lines start at column 0</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why">The builtin <code>virtual_lines</code> handler indents every continuation line to the diagnostic&rsquo;s column, so even a wrapped message lost most of the width on an indented line. A <code>wrapped_lines</code> handler in <code>lua/options.lua</code> replaces it: it draws the same cursor-line-only virtual lines with the same highlight groups, wraps by display width at the window&rsquo;s text width, and starts continuation lines at column 0. It redraws on cursor movement and window resize.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">22514a1</span>
+          <span class="subject">Wrap long diagnostic virtual lines at window width</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why">Virtual lines never wrap, so a long clang-tidy message ran off the right edge. The renderer splits a message on newlines, so a <code>format</code> function inserted them at the window width. The indent it left on continuation lines is what <code>e3bd34d</code> then removed.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-16</h2>
+    <p class="rel-note">A new colorscheme, and the reviewer answers in diffs.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">a392cfe</span>
+          <span class="subject">cyberdream as the colorscheme</span>
+          <span class="tag t-add">plugin</span>
+        </div>
+        <p class="why">cyberdream.nvim and vim-moonfly-colors join the list and cyberdream becomes the active scheme. ayu stays installed with its overrides. LSP semantic tokens are switched off on attach, because they repainted part of the buffer once clangd attached, which leaves treesitter as the only source of syntax colors.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">5d2e0bb</span>
+          <span class="subject">Reviewer proposals as unified diffs</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">&ldquo;Similar to diff&rdquo; from <code>a84d96c</code> left the shape open. The prompt now asks for a fenced <code>diff</code> block with <code>--- a/</code>/<code>+++ b/</code> headers, hunk lines, context, and <code>-</code>/<code>+</code> lines, which is the form that can be read at a glance and applied by hand.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">9146b2d</span>
+          <span class="subject">Filetypes for .ato and .service</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">nvim recognises neither extension, so both opened as plain text. <code>vim.filetype.add</code> maps <code>.ato</code> to python and <code>.service</code> to systemd.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-12</h2>
+    <p class="rel-note">More room for agents, and tabs named by their full path.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">7653332</span>
+          <span class="subject">Tabs named by their full path</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">nvim&rsquo;s default tabline always abbreviates directories, so <code>lua/plugins/ui.lua</code> read as <code>l/p/ui.lua</code> and <code>agent://claude/shellbox</code> as <code>a//c/shellbox</code>. lualine takes over the tabline with its <code>tabs</code> component showing the cwd-relative path and its own abbreviation off. lualine names every terminal after <code>$SHELL</code>, so agent terminals fall back to their <code>agent://</code> buffer name.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">fbacc49</span>
+          <span class="subject">Agent terminals at 50% height</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Agent terminals get half the screen instead of a third. The split ratio goes from 0.33 to 0.50. The valgrind pane keeps 0.33.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-11</h2>
+    <p class="rel-note">Close keys agree on <code>x</code>, and three windows that behaved wrongly now behave.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">4b8e563</span>
+          <span class="subject">Close keys on x, valgrind panes pinned</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why">Quickfix close moves from <code>\qc</code> to <code>\qx</code> and diffview close from <code>\gc</code> to <code>\gx</code>, matching <code>\vx</code> and trouble&rsquo;s <code>\x</code>. With <code>switchbuf</code> holding <code>uselast</code>, <code>&lt;CR&gt;</code> in the quickfix opened the source in the previously used window, so after <code>\vp</code> it landed on top of the program output. The output pane, the stack view and the raw report now set <code>winfixbuf</code>, which quickfix skips.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">03d9c95</span>
+          <span class="subject">Build-dir files stay in the buffers picker</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why">The ignore patterns sat in telescope&rsquo;s defaults, so an open file under <code>build/</code> was missing from <code>\fb</code> too. They now apply to <code>find_files</code> only.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">722e821</span>
+          <span class="subject">Wrapped lines in the neogit status</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Neogit hardcodes <code>nowrap</code> on its status window and re-applies it on every render, so a <code>FileType</code> autocmd is overridden. Setting <code>wrap</code> on <code>NeogitStatusRefreshed</code>, which fires after each render, is the earliest point it sticks.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="release">
+    <h2>2026-09-10</h2>
+    <p class="rel-note">Small corrections to the reviewer, the <code>gr</code> prefix and <code>\mw</code>.</p>
+    <div class="log">
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">80351cc</span>
+          <span class="subject">No hit-enter after removing the build dir</span>
+          <span class="tag t-fix">fix</span>
+        </div>
+        <p class="why"><code>confirm()</code> leaves its prompt on the cmdline, so the notification after <code>\mw</code> overflowed and asked for a hit-enter. A <code>redraw</code> clears it first.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">6e57e69</span>
+          <span class="subject">gr left to nvim as a group prefix</span>
+          <span class="tag t-drop">removed</span>
+        </div>
+        <p class="why">A buffer-local <code>gr</code> for references shadowed nvim&rsquo;s builtin <code>gr*</code> LSP maps, so <code>grr</code>, <code>grn</code> and <code>gra</code> waited on the timeout. Dropping it leaves <code>grr</code> for references.</p>
+      </div>
+
+      <div class="entry">
+        <div class="entry-head">
+          <span class="sha">a84d96c</span>
+          <span class="subject">Proposal hints for the reviewer</span>
+          <span class="tag t-set">option</span>
+        </div>
+        <p class="why">Proposals came back as bare code blocks with nothing saying where they belonged or what they replaced. The prompt now asks for diff-like blocks with enough cues to show where each change lands and what is removed and added.</p>
+      </div>
+
     </div>
   </section>
 

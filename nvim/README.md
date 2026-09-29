@@ -60,7 +60,7 @@ run at startup. If you never see that warning, the sorter is already built.
 
 ## Plugins
 
-44 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
+46 plugins managed by Neovim's built-in `vim.pack` (the list lives in `lua/plugins/init.lua`;
 each plugin's setup lives in the matching module under `lua/plugins/`).
 
 Two HTML pages in `docs/` cover the same ground in more detail: `docs/plugins.html` is
@@ -80,7 +80,8 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 
 | Plugin | Purpose |
 | --- | --- |
-| `neovim-ayu` | Colorscheme (dark variant, custom `LineNr`) |
+| `cyberdream.nvim` | Active colorscheme. No config |
+| `neovim-ayu`, `vim-moonfly-colors` | Alternative colorschemes. ayu keeps its `setup()` overrides (`LineNr`, `WinSeparator`) for when it is selected. moonfly has no config |
 | `lualine.nvim` | Statusline: mode, branch, diff, diagnostics, path, encoding, position |
 | `which-key.nvim` | Popup after 1s showing leader groups (`\f` find, `\m` cmake, `\d` debug, `\g` git, …) |
 
@@ -183,8 +184,7 @@ the tool as an argument and will serve them unchanged.
 | `\vr` | Valgrind's own report, as it printed it |
 | `\vx` | Close the windows valgrind opened |
 
-The output pane opens on every run, as a 33% bottom split — the share the agent
-terminals take — and focus stays on the code, so starting a run does not interrupt
+The output pane opens on every run, as a 33% bottom split, and focus stays on the code, so starting a run does not interrupt
 what is being edited. `\vp` focuses it later. The program's output is streamed
 into it as it arrives and follows the tail unless you have scrolled back. The
 stack view and the raw report open the same size. This matters for a target that never exits on its own — a
@@ -223,7 +223,7 @@ Saved logs get the `valgrind` filetype from a small autocmd on `*.valgrind` and
 ## Agents
 
 Coding agents are not a plugin. `lua/agents.lua` runs them as plain
-`jobstart(argv, { term = true })` terminals in a 33% bottom split, keyed by
+`jobstart(argv, { term = true })` terminals in a 50% bottom split, keyed by
 **(agent, git root)** so several agents stay alive side by side in the same
 repository. `lua/plugins/agents.lua` holds the agent table and the keymaps; adding
 one is a new entry plus a `map(...)` line.
@@ -245,14 +245,15 @@ one is a new entry plus a `map(...)` line.
 Model pickers are per-agent, because each agent takes a system prompt through
 different flags and must never be offered each other's models. Claude lists
 `~/.config/models/claude/*.md` and launches
-`--model <name> --append-system-prompt-file <path>`. The reviewer under `\cd` is a
+`--remote-control --model <name> --append-system-prompt-file <path>`, so those
+sessions can be followed from another device. The reviewer under `\cd` is a
 separate agent rather than a claude variant, so a review and a working session stay
 alive side by side in one repository. It adds
-`--disallowedTools Edit NotebookEdit` and a prompt forbidding writes through Bash,
-Write, and subagents as well, carving out only its own memory files, artifact
-scratch files, and build or installer output. `Write` stays enabled because those
-carve-outs need it, and because Bash already makes the flag a hint rather than a
-guarantee. Because claude refuses `--append-system-prompt` together with
+`--disallowedTools Edit Write NotebookEdit Agent`, which also keeps it from
+delegating an edit to a subagent, and a prompt forbidding writes through Bash and
+installing, deploying, or publishing targets. Building and testing stay allowed.
+The prompt asks for proposals as fenced `diff` blocks with `---`/`+++` headers and
+`@@` hunk lines, so each one says where it lands. Because claude refuses `--append-system-prompt` together with
 `--append-system-prompt-file`, it inlines the picked model's prompt file and
 appends the review rules to that text. Opencode lists what
 `opencode models` reports (read once per session, it takes about a second) and

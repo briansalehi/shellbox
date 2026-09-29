@@ -279,7 +279,7 @@
   <header class="mast">
     <div class="eyebrow">shellbox / nvim</div>
     <h1>Plugin Reference</h1>
-    <p class="lede">44 plugins under Neovim's builtin <code>vim.pack</code>, what each one is for, and every key it owns. The list lives in <code>lua/plugins/init.lua</code>; each plugin's setup lives in the matching module under <code>lua/plugins/</code>.</p>
+    <p class="lede">46 plugins under Neovim's builtin <code>vim.pack</code>, what each one is for, and every key it owns. The list lives in <code>lua/plugins/init.lua</code>; each plugin's setup lives in the matching module under <code>lua/plugins/</code>.</p>
     <nav class="nav">
       <a href="./changelog.html">&larr; Changelog</a>
       <span>leader is \</span>
@@ -410,14 +410,14 @@
 
     <div class="plug">
       <div class="plug-head"><span class="plug-name">nvim-bqf</span><span class="plug-tag">plugins/diagnostics.lua</span></div>
-      <p class="why">Preview pane in the native quickfix window, so build errors and <code>gr</code> references read in context while scrolling. Keys below are buffer-local to the quickfix window; the <code>\q</code> group opens and walks the list itself.</p>
+      <p class="why">Preview pane in the native quickfix window, so build errors and <code>grr</code> references read in context while scrolling. Keys below are buffer-local to the quickfix window; the <code>\q</code> group opens and walks the list itself.</p>
       <dl class="keys">
         <dt>C-f &middot; C-b</dt><dd>Scroll the preview without leaving the list</dd>
         <dt>p &middot; P</dt><dd>Toggle preview for this item / automatically</dd>
         <dt>Tab</dt><dd>Mark an entry</dd>
         <dt>zn &middot; zN</dt><dd>Filter to / away from marked entries</dd>
         <dt>C-p &middot; C-n</dt><dd>Previous / next file in the list</dd>
-        <dt>\qo &middot; \qc</dt><dd>Open / close quickfix</dd>
+        <dt>\qo &middot; \qx</dt><dd>Open / close quickfix</dd>
         <dt>\qn &middot; \qp</dt><dd>Next / previous entry</dd>
         <dt>\qf &middot; \ql</dt><dd>First / last entry</dd>
       </dl>
@@ -451,7 +451,7 @@
       <p class="why">clangd configured directly through <code>vim.lsp.config</code>, no lspconfig and no mason. Keys are bound on <code>LspAttach</code>, so they exist only in buffers with a server.</p>
       <dl class="keys">
         <dt>gd &middot; gD</dt><dd>Definition / declaration</dd>
-        <dt>gi &middot; gr</dt><dd>Implementation / references</dd>
+        <dt>gi &middot; grr</dt><dd>Implementation / references (<code>grr</code> is nvim&rsquo;s builtin; <code>gr</code> is left as the group prefix)</dd>
         <dt>K</dt><dd>Hover</dd>
         <dt>\rn</dt><dd>Rename symbol</dd>
         <dt>\lc</dt><dd>Code action</dd>
@@ -460,7 +460,7 @@
         <dt>]d &middot; [d</dt><dd>Next / previous diagnostic</dd>
         <dt>C-s</dt><dd>Signature help, insert mode</dd>
       </dl>
-      <p class="caveat">Diagnostics also render inline under the cursor's line via the builtin <code>virtual_lines</code>, so <code>gl</code> is only needed for the full float.</p>
+      <p class="caveat">Diagnostics also render inline under the cursor's line through a <code>wrapped_lines</code> handler in <code>lua/options.lua</code>, which replaces the builtin <code>virtual_lines</code> so long messages wrap at the window width and continue from column 0. <code>gl</code> is only needed for the full float. Semantic tokens are disabled on attach, so treesitter alone colors the syntax.</p>
     </div>
   </section>
 
@@ -652,7 +652,7 @@
         <dt>\gd</dt><dd>Diff the working tree</dd>
         <dt>\gh</dt><dd>History for this file</dd>
         <dt>\gH</dt><dd>History for the repository</dd>
-        <dt>\gc</dt><dd>Close the diff view</dd>
+        <dt>\gx</dt><dd>Close the diff view</dd>
       </dl>
     </div>
   </section>
@@ -661,8 +661,13 @@
     <h2>Appearance</h2>
 
     <div class="plug">
-      <div class="plug-head"><span class="plug-name">neovim-ayu</span><span class="plug-tag">plugins/colorscheme.lua</span></div>
-      <p class="why">Colorscheme, dark variant, with a custom <code>LineNr</code>. Its accent is the amber used throughout these pages.</p>
+      <div class="plug-head"><span class="plug-name">cyberdream.nvim</span><span class="plug-tag">plugins/colorscheme.lua</span></div>
+      <p class="why">The active colorscheme. No config.</p>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">neovim-ayu</span> <span class="plug-name">vim-moonfly-colors</span><span class="plug-tag">plugins/colorscheme.lua</span></div>
+      <p class="why">Installed alternatives. ayu still runs its <code>setup()</code> with a custom <code>LineNr</code> and <code>WinSeparator</code>, which take effect only under <code>colorscheme ayu</code>. Its accent is the amber used throughout these pages. moonfly has no config.</p>
     </div>
 
     <div class="plug">
@@ -706,7 +711,7 @@
       <p class="why"><code>\v</code> is a namespace per valgrind tool, so the rest have somewhere to go: <code>\vm</code> memcheck, <code>\vh</code> helgrind, <code>\vd</code> drd, <code>\vc</code> callgrind, <code>\vg</code> cachegrind, <code>\va</code> massif, <code>\vt</code> dhat. Only memcheck is wired up; helgrind and DRD print the same report shape, so the filter, stack and suppression functions already take the tool as an argument. <code>\vs</code> stops whichever tool is running, <code>\vp</code> / <code>\vr</code> read whichever one ran last and <code>\vx</code> closes what they opened, so those four sit at the top level.</p>
       <p class="why">Each view owns one window. Pressing <code>\vp</code>, <code>\vr</code> or <code>\vmt</code> again focuses the window it is already in rather than stacking another copy &mdash; <code>\vmt</code> on a second error replaces the stack on screen, and <code>\vr</code> re-reads the report so a run still going shows what it has written since.</p>
       <p class="why"><code>\vx</code> clears the workspace in one key: the output, the stack view, the raw report and the quickfix window, but only when valgrind is what filled the quickfix &mdash; a list from anywhere else is left alone. It closes the quickfix <i>window</i> and not the list, so <code>\qo</code> brings the same errors back, and it keeps the output buffer so <code>\vp</code> reopens the same scrollback.</p>
-      <p class="why">The output pane opens on every run, as a 33% bottom split &mdash; the share the agent terminals take &mdash; and focus stays on the code, so starting a run does not interrupt what is being edited. <code>\vp</code> focuses it later. The program&rsquo;s output is streamed into it as it arrives and follows the tail unless the reader has scrolled back. The stack view and the raw report open the same size. This matters for a target that never exits on its own &mdash; a server, say: valgrind reports nothing until the process ends, so without live output such a run looks like it has done nothing at all. The way to use one is to start it, exercise it, then <code>\vs</code>.</p>
+      <p class="why">The output pane opens on every run, as a 33% bottom split, and focus stays on the code, so starting a run does not interrupt what is being edited. <code>\vp</code> focuses it later. The program&rsquo;s output is streamed into it as it arrives and follows the tail unless the reader has scrolled back. The stack view and the raw report open the same size. This matters for a target that never exits on its own &mdash; a server, say: valgrind reports nothing until the process ends, so without live output such a run looks like it has done nothing at all. The way to use one is to start it, exercise it, then <code>\vs</code>.</p>
       <p class="why">Valgrind runs 20&ndash;50x slower than native, so a run is long enough to want calling off. <code>\vs</code> sends SIGTERM, which valgrind treats as a normal shutdown: it writes a complete report on the way out, so the errors found so far still reach the quickfix list, titled <code>(stopped)</code>. A second run will not start over the top of one already going, and a run still in flight is stopped when nvim quits rather than left holding the target process open.</p>
       <dl class="keys">
         <dt>\vmm</dt><dd>Run memcheck on the launch target</dd>
@@ -727,8 +732,9 @@
 
     <div class="plug">
       <div class="plug-head"><span class="plug-name">lua/agents.lua</span><span class="plug-tag">not a plugin</span></div>
-      <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a 33% bottom split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>; adding one is a new entry plus a <code>map(...)</code> line.</p>
-      <p class="why">The reviewer behind <code>\cd</code> is a separate agent rather than a claude variant, precisely because sessions are keyed that way: as a variant it would reuse the claude already running in the repository and its flags would be dropped, so the keymap would silently hand back an agent that can still edit. It runs <code>claude</code> with <code>--disallowedTools Edit Write NotebookEdit</code>, which removes the editing tools from the process, plus a prompt closing the Bash routes to a write. Because claude refuses <code>--append-system-prompt</code> alongside <code>--append-system-prompt-file</code>, its picker inlines the chosen model&rsquo;s prompt file and appends the review rules to that text instead of passing the path.</p>
+      <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a 50% bottom split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>; adding one is a new entry plus a <code>map(...)</code> line.</p>
+      <p class="why">The reviewer behind <code>\cd</code> is a separate agent rather than a claude variant, precisely because sessions are keyed that way: as a variant it would reuse the claude already running in the repository and its flags would be dropped, so the keymap would silently hand back an agent that can still edit. It runs <code>claude</code> with <code>--disallowedTools Edit Write NotebookEdit Agent</code>, which removes the editing tools from the process and keeps it from delegating an edit to a subagent, plus a prompt closing the Bash routes to a write. The prompt asks for proposals as fenced <code>diff</code> blocks with <code>---</code>/<code>+++</code> headers and <code>@@</code> hunk lines, so each one says where it lands. Because claude refuses <code>--append-system-prompt</code> alongside <code>--append-system-prompt-file</code>, its picker inlines the chosen model&rsquo;s prompt file and appends the review rules to that text instead of passing the path.</p>
+      <p class="why">The claude model picker (<code>\cc</code>) launches with <code>--remote-control</code>, so those sessions can be followed from another device. Opencode runs on the terminal&rsquo;s alternate screen and leaves no scrollback in the buffer, so in its normal mode <code>C-u</code> / <code>C-d</code> send PageUp / PageDown to opencode itself. Its export (<code>ctrl+x x</code>) and prompt editor (<code>ctrl+x e</code>) run <code>$VISUAL</code>, set to <code>scripts/remote-edit.lua</code>, which opens the file in a new tab of this nvim and returns to opencode once that buffer is closed.</p>
       <dl class="keys">
         <dt>\cc &middot; \cC</dt><dd>claude model picker, plain / continue</dd>
         <dt>\cr &middot; \cR</dt><dd>claude raw, plain / continue</dd>
@@ -744,7 +750,7 @@
     </div>
   </section>
 
-  <footer>shellbox/nvim &middot; 44 plugins &middot; vim.pack &middot; nvim 0.13.0-dev</footer>
+  <footer>shellbox/nvim &middot; 46 plugins &middot; vim.pack &middot; nvim 0.13.0-dev</footer>
 
 </div>
 </body>
