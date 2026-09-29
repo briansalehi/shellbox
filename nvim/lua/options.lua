@@ -12,7 +12,7 @@ opt.tabstop = 4
 opt.softtabstop = 4
 opt.shiftwidth = 4
 opt.signcolumn = "yes"
-opt.scrolloff = 8
+opt.scrolloff = 5
 
 -- every float that does not set its own border gets one: lsp hover, signature
 -- help, diagnostics, telescope-ui-select. telescope, cmp and which-key set
