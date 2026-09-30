@@ -50,11 +50,15 @@ end, {
 -- This runs it in a terminal split from the project's top-level directory,
 -- against cmake-tools' build dir. Ctrl-] quits the monitor, and so does
 -- <leader>ms, which stops it before falling back to cmake-tools' runner.
-local monitor_job = nil
+local monitor_job, monitor_buf = nil, nil
 local function stop_monitor()
   if monitor_job and vim.fn.jobwait({ monitor_job }, 0)[1] == -1 then
     vim.fn.jobstop(monitor_job)
-    monitor_job = nil
+    -- wiping the buffer closes its split too
+    if vim.api.nvim_buf_is_valid(monitor_buf) then
+      vim.api.nvim_buf_delete(monitor_buf, { force = true })
+    end
+    monitor_job, monitor_buf = nil, nil
     return true
   end
   return false
@@ -72,6 +76,7 @@ vim.keymap.set('n', '<leader>mM', function()
   table.insert(argv, 'monitor')
   vim.cmd('botright new')
   monitor_job = vim.fn.jobstart(argv, { term = true, cwd = root })
+  monitor_buf = vim.api.nvim_get_current_buf()
   -- the split opens in terminal mode, where keys go to the monitor
   vim.keymap.set('t', '<leader>ms', stop_monitor, { buffer = true, desc = 'ESP-IDF: stop monitor' })
   vim.cmd('startinsert')
