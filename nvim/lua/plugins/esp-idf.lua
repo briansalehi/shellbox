@@ -48,7 +48,17 @@ end, {
 -- idf_monitor needs a real TTY. As a cmake target it runs through the quickfix
 -- executor, which has none, so it exits at once and the panel auto-closes.
 -- This runs it in a terminal split from the project's top-level directory,
--- against cmake-tools' build dir. Ctrl-] quits the monitor.
+-- against cmake-tools' build dir. Ctrl-] quits the monitor, and so does
+-- <leader>ms, which stops it before falling back to cmake-tools' runner.
+local monitor_job = nil
+local function stop_monitor()
+  if monitor_job and vim.fn.jobwait({ monitor_job }, 0)[1] == -1 then
+    vim.fn.jobstop(monitor_job)
+    monitor_job = nil
+    return true
+  end
+  return false
+end
 vim.keymap.set('n', '<leader>mM', function()
   if vim.fn.executable('idf.py') == 0 then
     vim.notify('idf.py not found, run :IdfActivate first', vim.log.levels.WARN)
@@ -61,6 +71,8 @@ vim.keymap.set('n', '<leader>mM', function()
   if vim.env.ESPPORT then vim.list_extend(argv, { '-p', vim.env.ESPPORT }) end
   table.insert(argv, 'monitor')
   vim.cmd('botright new')
-  vim.fn.jobstart(argv, { term = true, cwd = root })
+  monitor_job = vim.fn.jobstart(argv, { term = true, cwd = root })
   vim.cmd('startinsert')
 end, { desc = 'ESP-IDF: serial monitor' })
+
+return { stop_monitor = stop_monitor }

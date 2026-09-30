@@ -379,7 +379,11 @@ vim.keymap.set('n', '<leader>mv', function() browse_cache(false) end,
     { desc = 'CMake: cache options' })
 vim.keymap.set('n', '<leader>mV', function() browse_cache(true) end,
     { desc = 'CMake: cache options, including advanced' })
-map('<leader>ms', 'CMakeStopRunner',         'CMake: stop')
+vim.keymap.set('n', '<leader>ms', function()
+    -- the ESP-IDF monitor runs outside cmake-tools, so stop it first
+    if require('plugins.esp-idf').stop_monitor() then return end
+    vim.cmd('CMakeStopRunner')
+end, { desc = 'CMake: stop (or ESP-IDF monitor)' })
 map('<leader>mS', 'CMakeStopExecutor',       'CMake: stop')
 -- ctest lives under <leader>mt. cmake-tools' run_test drives a picker and
 -- forwards only a single extra argument, so the direct runs below go through
