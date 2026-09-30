@@ -117,7 +117,7 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 
 | Plugin | Purpose |
 | --- | --- |
-| `cmake-tools.nvim` | Configure, build, run, test, presets, kits, build types — all on `\m*`. Cache options are not its job, so `\mv` (and `\mV` for advanced ones) lists `cmake -LH`, stages edits into the generate options `\mc` shows, and reconfigures once |
+| `cmake-tools.nvim` | Configure, build, run, test, presets, kits, build types — all on `\m*`. `\mM` opens the ESP-IDF serial monitor in a terminal at the project root, since the quickfix panel has no TTY for it. Cache options are not its job, so `\mv` (and `\mV` for advanced ones) lists `cmake -LH`, stages edits into the generate options `\mc` shows, and reconfigures once |
 | `overseer.nvim` + `toggleterm.nvim` | Task runner and terminal that cmake-tools drives for its build/run panels |
 | `clangd_extensions.nvim` | Inlay hints, AST view, source/header switch, type hierarchy, plus `\li` / `\lI` code actions |
 | `nvim-dap` + `nvim-dap-ui` | Debugger on `\d*`. `plugins.cmake` must load first — dap re-registers cmake-tools' debug function |

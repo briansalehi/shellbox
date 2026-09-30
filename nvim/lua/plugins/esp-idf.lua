@@ -44,3 +44,23 @@ end, {
   end,
   desc = 'Set ESP-IDF serial port (ESPPORT)',
 })
+
+-- idf_monitor needs a real TTY. As a cmake target it runs through the quickfix
+-- executor, which has none, so it exits at once and the panel auto-closes.
+-- This runs it in a terminal split from the project's top-level directory,
+-- against cmake-tools' build dir. Ctrl-] quits the monitor.
+vim.keymap.set('n', '<leader>mM', function()
+  if vim.fn.executable('idf.py') == 0 then
+    vim.notify('idf.py not found, run :IdfActivate first', vim.log.levels.WARN)
+    return
+  end
+  local cmake = require('cmake-tools')
+  local root = tostring(cmake.get_config().cwd or '')
+  if root == '' then root = vim.loop.cwd() end
+  local argv = { 'idf.py', '-B', tostring(cmake.get_build_directory()) }
+  if vim.env.ESPPORT then vim.list_extend(argv, { '-p', vim.env.ESPPORT }) end
+  table.insert(argv, 'monitor')
+  vim.cmd('botright new')
+  vim.fn.jobstart(argv, { term = true, cwd = root })
+  vim.cmd('startinsert')
+end, { desc = 'ESP-IDF: serial monitor' })
