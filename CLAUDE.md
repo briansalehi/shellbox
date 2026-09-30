@@ -81,5 +81,7 @@ up any new file in those directories automatically. A new `service` must ship a 
 
 ## Notes
 
-- Git remote is `github` (`git@github.com:briansalehi/shellbox.git`); default branch is `master`.
+- Main remote is `server` (`fserver:projects/shellbox`), which `master` tracks. `github`
+  (`git@github.com:briansalehi/shellbox.git`) is only a mirror: push to `server` first, then
+  `github`. Default branch is `master`.
 - `README.md` holds the Fedora package list and the from-source build flags for neomutt and LLVM.
