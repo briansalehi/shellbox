@@ -72,6 +72,8 @@ vim.keymap.set('n', '<leader>mM', function()
   table.insert(argv, 'monitor')
   vim.cmd('botright new')
   monitor_job = vim.fn.jobstart(argv, { term = true, cwd = root })
+  -- the split opens in terminal mode, where keys go to the monitor
+  vim.keymap.set('t', '<leader>ms', stop_monitor, { buffer = true, desc = 'ESP-IDF: stop monitor' })
   vim.cmd('startinsert')
 end, { desc = 'ESP-IDF: serial monitor' })
 
