@@ -79,6 +79,11 @@ vim.keymap.set('n', '<leader>mM', function()
   monitor_buf = vim.api.nvim_get_current_buf()
   -- the split opens in terminal mode, where keys go to the monitor
   vim.keymap.set('t', '<leader>ms', stop_monitor, { buffer = true, desc = 'ESP-IDF: stop monitor' })
+  -- same window moves as the agent terminals, which also leave terminal mode
+  for _, d in ipairs({ 'h', 'j', 'k', 'l' }) do
+    vim.keymap.set('t', '<C-' .. d .. '>', [[<C-\><C-n><C-w>]] .. d,
+      { buffer = true, desc = 'Window: move ' .. d })
+  end
   vim.cmd('startinsert')
 end, { desc = 'ESP-IDF: serial monitor' })
 
