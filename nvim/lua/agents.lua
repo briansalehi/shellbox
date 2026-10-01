@@ -12,7 +12,10 @@ M.order  = {}   -- declaration order, used by the pickers
 
 local defaults = {
     agents   = {},
-    window   = { position = 'botright', split_ratio = 0.3 },
+    -- orientation: 'horizontal' sizes by split_ratio of the lines,
+    -- 'vertical' by width_ratio of the columns
+    window   = { position = 'botright', orientation = 'horizontal',
+                 split_ratio = 0.3, width_ratio = 0.3 },
     refresh  = { enable = true, interval = 1000, updatetime = 100, notify = true },
     git_root = true,
 }
@@ -54,11 +57,18 @@ local function apply_window_options(win)
 end
 
 local function open_split(buf)
-    vim.cmd(M.config.window.position .. ' split')
+    local cfg = M.config.window
+    local vertical = cfg.orientation == 'vertical'
+    vim.cmd(cfg.position .. (vertical and ' vsplit' or ' split'))
     local win = vim.api.nvim_get_current_win()
     if buf then vim.api.nvim_win_set_buf(win, buf) end
-    vim.api.nvim_win_set_height(win,
-        math.max(5, math.floor(vim.o.lines * M.config.window.split_ratio)))
+    if vertical then
+        vim.api.nvim_win_set_width(win,
+            math.max(20, math.floor(vim.o.columns * cfg.width_ratio)))
+    else
+        vim.api.nvim_win_set_height(win,
+            math.max(5, math.floor(vim.o.lines * cfg.split_ratio)))
+    end
     apply_window_options(win)
     return win
 end

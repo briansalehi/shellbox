@@ -1,4 +1,4 @@
--- Coding agents in a 50% bottom split. The engine is lua/agents.lua; this file is the agent table and the keymaps.
+-- Coding agents in a 15% right split (50% when horizontal). The engine is lua/agents.lua; this file is the agent table and the keymaps.
 
 local agents = require('agents')
 local map = require('plugins.util').fn_map
@@ -146,7 +146,7 @@ local function cursor_models()
 end
 
 agents.setup({
-    window = { split_ratio = 0.50 },
+    window = { orientation = 'vertical', width_ratio = 0.15, split_ratio = 0.50 },
     agents = {
         {
             name = 'claude',

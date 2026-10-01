@@ -223,7 +223,8 @@ Saved logs get the `valgrind` filetype from a small autocmd on `*.valgrind` and
 ## Agents
 
 Coding agents are not a plugin. `lua/agents.lua` runs them as plain
-`jobstart(argv, { term = true })` terminals in a 50% bottom split, keyed by
+`jobstart(argv, { term = true })` terminals in a right split 15% of the screen
+width (or a 50% bottom split with `orientation = 'horizontal'`), keyed by
 **(agent, git root)** so several agents stay alive side by side in the same
 repository. `lua/plugins/agents.lua` holds the agent table and the keymaps; adding
 one is a new entry plus a `map(...)` line.
