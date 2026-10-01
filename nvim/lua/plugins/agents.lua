@@ -146,7 +146,7 @@ local function cursor_models()
 end
 
 agents.setup({
-    window = { orientation = 'vertical', width_ratio = 0.15, split_ratio = 0.50 },
+    window = { orientation = 'vertical', width_ratio = 0.30, split_ratio = 0.50 },
     agents = {
         {
             name = 'claude',
