@@ -56,12 +56,8 @@ local function apply_window_options(win)
     end
 end
 
-local function open_split(buf)
+local function size_window(win, vertical)
     local cfg = M.config.window
-    local vertical = cfg.orientation == 'vertical'
-    vim.cmd(cfg.position .. (vertical and ' vsplit' or ' split'))
-    local win = vim.api.nvim_get_current_win()
-    if buf then vim.api.nvim_win_set_buf(win, buf) end
     if vertical then
         vim.api.nvim_win_set_width(win,
             math.max(20, math.floor(vim.o.columns * cfg.width_ratio)))
@@ -69,6 +65,15 @@ local function open_split(buf)
         vim.api.nvim_win_set_height(win,
             math.max(5, math.floor(vim.o.lines * cfg.split_ratio)))
     end
+end
+
+local function open_split(buf)
+    local cfg = M.config.window
+    local vertical = cfg.orientation == 'vertical'
+    vim.cmd(cfg.position .. (vertical and ' vsplit' or ' split'))
+    local win = vim.api.nvim_get_current_win()
+    if buf then vim.api.nvim_win_set_buf(win, buf) end
+    size_window(win, vertical)
     apply_window_options(win)
     return win
 end
@@ -169,6 +174,13 @@ local function setup_buffer_keymaps(s)
     end
     vim.keymap.set('t', '<leader>cc', function() M.hide(s.agent.name) end,
         { buffer = s.buf, desc = 'Agent: hide' })
+    -- the built-in moves equalize the layout, so re-apply the configured size
+    for key, vertical in pairs({ L = true, J = false }) do
+        vim.keymap.set('n', '<C-w>' .. key, function()
+            vim.cmd.wincmd(key)
+            size_window(vim.api.nvim_get_current_win(), vertical)
+        end, { buffer = s.buf, desc = 'Window: move to ' .. (vertical and 'right' or 'bottom') })
+    end
     -- an agent on the alternate screen leaves no scrollback in the buffer, so
     -- normal-mode scrolling has to be forwarded to the agent as its own keys
     for lhs, bytes in pairs(s.agent.normal_keys or {}) do
