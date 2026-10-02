@@ -10,4 +10,8 @@ require('ayu').setup({
     }, -- A dictionary of group names, each associated with a dictionary of parameters (`bg`, `fg`, `sp` and `style`) and colors in hex.
 })
 
+vim.api.nvim_create_autocmd('ColorScheme', {
+    callback = function() vim.g.terminal_color_8 = '#3a3f47' end,
+})
+
 vim.cmd('colorscheme cyberdream')
