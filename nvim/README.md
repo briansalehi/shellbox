@@ -242,6 +242,7 @@ one is a new entry plus a `map(...)` line.
 | `\cu` / `\cU` | cursor, plain / continue last chat |
 | `\cp` | pick or focus a running agent |
 | `<M-r>` | redraw the terminal (`<C-l>` is not free: `<C-h/j/k/l>` leave the window) |
+| `<M-h/j/k/l>` | leave the terminal like `<C-h/j/k/l>`, but the agent window keeps scrolling with new output |
 
 Model pickers are per-agent, because each agent takes a system prompt through
 different flags and must never be offered each other's models. Claude lists
@@ -269,7 +270,8 @@ so it has no prompt flag to pair with a model.
 
 Opening or toggling an agent lands in insert mode, but nothing re-enters insert on
 `WinEnter`, so leaving with `<C-\><C-n>` and switching windows keeps the scrollback
-position.
+position. `<C-h/j/k/l>` leave the terminal with the view frozen where it is, while
+`<M-h/j/k/l>` first move to the last line, so the unfocused window follows the output.
 
 Opencode is a full-screen app on the terminal's alternate screen, so its buffer
 holds only the visible screen and no scrollback. In its normal mode `<C-u>`/`<C-d>`

@@ -171,6 +171,10 @@ local function setup_buffer_keymaps(s)
     for _, d in ipairs({ 'h', 'j', 'k', 'l' }) do
         vim.keymap.set('t', '<C-' .. d .. '>', [[<C-\><C-n><C-w>]] .. d,
             { buffer = s.buf, desc = 'Window: move ' .. d })
+        -- G parks the cursor on the last line: an unfocused terminal window
+        -- scrolls with new output only while its cursor sits there
+        vim.keymap.set('t', '<M-' .. d .. '>', [[<C-\><C-n>G<C-w>]] .. d,
+            { buffer = s.buf, desc = 'Window: move ' .. d .. ', keep following output' })
     end
     vim.keymap.set('t', '<leader>cc', function() M.hide(s.agent.name) end,
         { buffer = s.buf, desc = 'Agent: hide' })
