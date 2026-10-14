@@ -1,5 +1,5 @@
 -- tree sitter
-require('nvim-treesitter').install({"c", "cpp", "lua", "cmake", "python", "rust"})
+require('nvim-treesitter').install({"c", "cpp", "lua", "cmake", "python", "rust", "bash"})
 
 vim.api.nvim_create_autocmd('FileType', {
     pattern = { 'c', 'cpp', 'lua', 'cmake', 'python', 'rust' },
