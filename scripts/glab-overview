@@ -23,7 +23,7 @@ collect_requests() {
     while read -r line
     do
         requests[$(get_number "$line")]="$line"
-    done < <(glab api --paginate 'projects/:id/merge_requests?state=opened' | jq -r '.[] | "!\(.iid) \(.detailed_merge_status) \(.draft) \(.source_branch) \(.author.username)"')
+    done < <(glab api --paginate 'projects/:id/merge_requests?state=opened' | jq -r '.[] | "!\(.iid) \(.detailed_merge_status) \(.draft) \(.source_branch) \(.author.username) \([.reviewers[].username] | join(",") | if . == "" then "-" else . end)"')
 }
 
 # interface
@@ -56,9 +56,34 @@ show_request() {
     echo -e "\e[0m"
 }
 
+show_group() {
+    local title="$1"
+    shift
+
+    if [[ $# -eq 0 ]]
+    then
+        return
+    fi
+
+    if [[ -n "$separator" ]]
+    then
+        echo
+    fi
+    separator="yes"
+
+    echo -e "\e[36m${title}\e[0m"
+
+    for entry in "$@"
+    do
+        show_request "$entry"
+    done
+}
+
 show_requests() {
     local me
+    local separator=""
     local mine=()
+    local reviewing=()
     local others=()
     me="$(glab api user | jq -r '.username')"
 
@@ -67,25 +92,17 @@ show_requests() {
         if [[ "$(get_author "$entry")" == "$me" ]]
         then
             mine+=("$entry")
+        elif [[ ",$(get_reviewers "$entry")," == *",$me,"* ]]
+        then
+            reviewing+=("$entry")
         else
             others+=("$entry")
         fi
     done
 
-    for entry in "${mine[@]}"
-    do
-        show_request "$entry"
-    done
-
-    if [[ ${#mine[@]} -gt 0 ]] && [[ ${#others[@]} -gt 0 ]]
-    then
-        echo
-    fi
-
-    for entry in "${others[@]}"
-    do
-        show_request "$entry"
-    done
+    show_group "My requests" "${mine[@]}"
+    show_group "Review requests" "${reviewing[@]}"
+    show_group "Other requests" "${others[@]}"
 }
 
 get_number() {
@@ -111,6 +128,11 @@ get_branch() {
 get_author() {
     local entry="$1"
     awk '{print $5}' <<< "$entry"
+}
+
+get_reviewers() {
+    local entry="$1"
+    awk '{print $6}' <<< "$entry"
 }
 
 is_mergeable() {
