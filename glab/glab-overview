@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+requests=()
+selected_number=0
+
+# internals
+
+get_merge_state() {
+    local number="$1"
+    # output: { "state": "opened", "draft": false, "merge_status": "mergeable", "has_conflicts": false, "threads_resolved": true, "pipeline": "success" }
+    glab api "projects/:id/merge_requests/$number" | jq "{state, draft, merge_status: .detailed_merge_status, has_conflicts, threads_resolved: .blocking_discussions_resolved, pipeline: .head_pipeline.status}"
+}
+
+get_approvals() {
+    local number="$1"
+    # output: { "approved": true, "approved_by": [ "xxx" ] }
+    glab api "projects/:id/merge_requests/$number/approvals" | jq "{approved, approved_by: [.approved_by[].user.username]}"
+}
+
+collect_requests() {
+    while read -r line
+    do
+        requests[$(get_number "$line")]="$line"
+    done < <(glab api --paginate 'projects/:id/merge_requests?state=opened' | jq -r '.[] | "!\(.iid) \(.detailed_merge_status) \(.draft) \(.source_branch)"')
+}
+
+# interface
+
+show_request() {
+    local entry="$1"
+    local state
+    state="$(get_state "$entry")"
+
+    case "$state" in
+        mergeable)
+            if is_approved "$entry"
+            then
+                echo -ne "\e[2;32m"
+            else
+                echo -ne "\e[2;33m"
+                state="not approved"
+            fi
+            ;;
+        draft_status) echo -ne "\e[2;37m" ;;
+        unchecked|checking|preparing|approvals_syncing|ci_still_running) echo -ne "\e[2;36m" ;;
+        *) echo -ne "\e[2;33m" ;;
+    esac
+
+    echo -n "$(get_number "$entry") "
+    echo -n "$(get_branch "$entry") "
+    echo -n "${state//_/ }"
+
+    echo -e "\e[0m"
+}
+
+show_requests() {
+    for entry in "${requests[@]}"
+    do
+        show_request "$entry"
+    done
+}
+
+get_number() {
+    local entry="$1"
+    awk '{print $1}' <<< "$entry" | tr -d '!'
+}
+
+get_state() {
+    local entry="$1"
+    awk '{print $2}' <<< "$entry"
+}
+
+is_draft() {
+    local entry="$1"
+    [[ "$(awk '{print $3}' <<< "$entry")" == "true" ]]
+}
+
+get_branch() {
+    local entry="$1"
+    awk '{print $4}' <<< "$entry"
+}
+
+is_mergeable() {
+    local entry="$1"
+    local number
+    number="$(get_number "$entry")"
+    [[ "$(get_merge_state "$number" | jq -r '.merge_status')" == "mergeable" ]]
+}
+
+is_approved() {
+    local entry="$1"
+    local number
+    number="$(get_number "$entry")"
+    [[ "$(get_approvals "$number" | jq '.approved_by | length')" -gt 0 ]]
+}
+
+main() {
+    collect_requests
+
+    if [[ $# -eq 0 ]] && [[ ${#requests[*]} -eq 0 ]]
+    then
+        return
+    elif [[ $# -eq 0 ]]
+    then
+        show_requests
+    else
+        selected_number="$(get_number "${requests[$1]:-}")"
+        if [[ -n "$selected_number" ]]
+        then
+            show_request "${requests[$1]}"
+        fi
+    fi
+}
+
+main "$@"
