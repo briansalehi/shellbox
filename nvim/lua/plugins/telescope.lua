@@ -69,3 +69,13 @@ vim.keymap.set('n', '<leader>fi', telescope_builtin.git_files)
 vim.keymap.set('n', '<leader>fb', telescope_builtin.buffers)
 vim.keymap.set('n', '<leader>fh', telescope_builtin.help_tags)
 vim.keymap.set('n', '<leader>fk', telescope_builtin.keymaps,   { desc = 'Find keymaps' })
+-- closes every file buffer but the current one; modified buffers, agent
+-- terminals and other special buffers stay
+vim.keymap.set('n', '<leader>fx', function()
+    local cur = vim.api.nvim_get_current_buf()
+    for _, b in ipairs(vim.api.nvim_list_bufs()) do
+        if b ~= cur and vim.bo[b].buflisted and vim.bo[b].buftype == '' and not vim.bo[b].modified then
+            vim.cmd.bdelete(b)
+        end
+    end
+end, { desc = 'Close other buffers' })
