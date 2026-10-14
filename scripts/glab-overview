@@ -23,13 +23,14 @@ collect_requests() {
     while read -r line
     do
         requests[$(get_number "$line")]="$line"
-    done < <(glab api --paginate 'projects/:id/merge_requests?state=opened' | jq -r '.[] | "!\(.iid) \(.detailed_merge_status) \(.draft) \(.source_branch)"')
+    done < <(glab api --paginate 'projects/:id/merge_requests?state=opened' | jq -r '.[] | "!\(.iid) \(.detailed_merge_status) \(.draft) \(.source_branch) \(.author.username)"')
 }
 
 # interface
 
 show_request() {
     local entry="$1"
+    local color
     local state
     state="$(get_state "$entry")"
 
@@ -37,26 +38,51 @@ show_request() {
         mergeable)
             if is_approved "$entry"
             then
-                echo -ne "\e[2;32m"
+                color="\e[32m"
             else
-                echo -ne "\e[2;33m"
+                color="\e[33m"
                 state="not approved"
             fi
             ;;
-        draft_status) echo -ne "\e[2;37m" ;;
-        unchecked|checking|preparing|approvals_syncing|ci_still_running) echo -ne "\e[2;36m" ;;
-        *) echo -ne "\e[2;33m" ;;
+        draft_status) color="\e[37m" ;;
+        unchecked|checking|preparing|approvals_syncing|ci_still_running) color="\e[36m" ;;
+        *) color="\e[33m" ;;
     esac
 
-    echo -n "$(get_number "$entry") "
-    echo -n "$(get_branch "$entry") "
-    echo -n "${state//_/ }"
+    echo -ne "\e[2m${color}$(get_number "$entry") "
+    echo -ne "\e[0m\e[1m${color}$(get_branch "$entry") "
+    echo -ne "\e[0m\e[2m${color}${state//_/ }"
 
     echo -e "\e[0m"
 }
 
 show_requests() {
+    local me
+    local mine=()
+    local others=()
+    me="$(glab api user | jq -r '.username')"
+
     for entry in "${requests[@]}"
+    do
+        if [[ "$(get_author "$entry")" == "$me" ]]
+        then
+            mine+=("$entry")
+        else
+            others+=("$entry")
+        fi
+    done
+
+    for entry in "${mine[@]}"
+    do
+        show_request "$entry"
+    done
+
+    if [[ ${#mine[@]} -gt 0 ]] && [[ ${#others[@]} -gt 0 ]]
+    then
+        echo
+    fi
+
+    for entry in "${others[@]}"
     do
         show_request "$entry"
     done
@@ -80,6 +106,11 @@ is_draft() {
 get_branch() {
     local entry="$1"
     awk '{print $4}' <<< "$entry"
+}
+
+get_author() {
+    local entry="$1"
+    awk '{print $5}' <<< "$entry"
 }
 
 is_mergeable() {
