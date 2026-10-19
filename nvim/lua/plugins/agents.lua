@@ -151,6 +151,7 @@ agents.setup({
         {
             name = 'claude',
             cmd = 'claude',
+            args = { '--chrome' },
             variants = {
                 continue        = { '--continue' },
                 resume          = { '--resume' },
@@ -168,7 +169,7 @@ agents.setup({
             cmd = 'claude',
             -- Write puts bytes on disk exactly like Edit, and a subagent has its
             -- own tool set, so Agent is an edit delegated one level down
-            args = { '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Agent' },
+            args = { '--chrome', '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Agent' },
             variants = {
                 continue = { '--continue' },
             },
