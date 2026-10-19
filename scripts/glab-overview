@@ -39,17 +39,25 @@ show_request() {
             if is_approved "$entry"
             then
                 color="\e[32m"
+                state="approved"
             else
                 color="\e[33m"
-                state="not approved"
+                state="mergeable but not approved"
             fi
             ;;
-        draft_status) color="\e[37m" ;;
-        unchecked|checking|preparing|approvals_syncing|ci_still_running) color="\e[36m" ;;
-        *) color="\e[33m" ;;
+        draft_status)
+            color="\e[37m"
+            state="still draft"
+            ;;
+        unchecked|checking|preparing|approvals_syncing|ci_still_running)
+            color="\e[36m"
+            ;;
+        *)
+            color="\e[35m"
+            ;;
     esac
 
-    echo -ne "\e[2m${color}$(get_number "$entry") "
+    echo -ne "\e[2m${color}   $(get_number "$entry") "
     echo -ne "\e[0m\e[1m${color}$(get_branch "$entry") "
     echo -ne "\e[0m\e[2m${color}${state//_/ }"
 
@@ -71,12 +79,13 @@ show_group() {
     fi
     separator="yes"
 
-    echo -e "\e[36m${title}\e[0m"
+    echo -e "\e[2;34m${title}\e[0m\n"
 
     for entry in "$@"
     do
         show_request "$entry"
     done
+    echo
 }
 
 show_requests() {
@@ -100,9 +109,9 @@ show_requests() {
         fi
     done
 
-    show_group "My requests" "${mine[@]}"
-    show_group "Review requests" "${reviewing[@]}"
-    show_group "Other requests" "${others[@]}"
+    show_group "My merge requests" "${mine[@]}"
+    show_group "Asked me for a review" "${reviewing[@]}"
+    show_group "Other's merge requests" "${others[@]}"
 }
 
 get_number() {
@@ -155,15 +164,8 @@ main() {
     if [[ $# -eq 0 ]] && [[ ${#requests[*]} -eq 0 ]]
     then
         return
-    elif [[ $# -eq 0 ]]
-    then
-        show_requests
     else
-        selected_number="$(get_number "${requests[$1]:-}")"
-        if [[ -n "$selected_number" ]]
-        then
-            show_request "${requests[$1]}"
-        fi
+        show_requests
     fi
 }
 
