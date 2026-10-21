@@ -49,8 +49,8 @@ set mailcap_path = ~/.config/mutt/mailcap
 
 # gitlab notifications
 subjectrx '\[Extern\] *' '%L%R'
-message-hook . 'unset display_filter; unset allow_ansi'
-message-hook '~f gitlab@u-experten.de' 'set display_filter = ~/.config/mutt/gitlab-filter; set allow_ansi'
+message-hook . 'unset display_filter; unset allow_ansi; reset quote_regex'
+message-hook '~f gitlab@u-experten.de' 'set display_filter = ~/.config/mutt/gitlab-filter; set allow_ansi; set quote_regex = "^$"'
 
 # urlscan
 set wait_key = no

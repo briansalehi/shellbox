@@ -1,30 +1,66 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 # Pager filter for GitLab notifications: drops the footer and HTML noise,
-# then highlights the markdown body.
+# then highlights the markdown body and the quoted diff excerpts.
 
-awk '
-    !body { print; if ($0 == "") body = 1; next }
-    /^-- $/ { exit }
-    /^<!--.*-->$/ || /^<\/?details>$/ { next }
-    /^ >( |$)/ {
-        if (!diff) { print "```diff"; diff = 1 }
-        print substr($0, 4); started = 1; blank = 0; next
-    }
-    diff { print "```"; diff = 0 }
-    {
-        sub(/^<summary>/, "> "); sub(/<\/summary>$/, "")
-        gsub(/&lt;/, "<"); gsub(/&gt;/, ">"); gsub(/&quot;/, "\""); gsub(/&#39;/, "\047"); gsub(/&amp;/, "\\&")
-    }
-    /^```/ { fence = !fence }
-    !fence && match($0, /: https?:\/\/[^ ]+$/) {
-        print substr($0, 1, RSTART); $0 = substr($0, RSTART + 2)
-    }
-    /^$/ { if (!fence && (blank++ || !started)) next; print; next }
-    { blank = 0; started = 1; print }
-' | awk '
-    BEGIN { bat = "bat --color=always --theme=ansi --style=plain --paging=never --language=" }
-    !body { print; if ($0 == "") { body = 1; fflush() }; next }
-    /^```diff$/ { close(bat "markdown"); diff = 1; next }
-    diff && /^```$/ { close(bat "diff"); diff = 0; next }
-    { print | (bat (diff ? "diff" : "markdown")) }
-'
+import html
+import re
+import subprocess
+import sys
+
+BAT = ["bat", "--color=always", "--theme=ansi", "--style=plain", "--paging=never"]
+SIGN = {"-": "\033[31m-\033[0m", "+": "\033[32m+\033[0m"}
+
+
+def bat(lines, *args):
+    result = subprocess.run(BAT + list(args), input="\n".join(lines) + "\n", capture_output=True, text=True)
+    return result.stdout.splitlines()
+
+
+def render(segment):
+    kind, file, lines = segment
+    if kind == "markdown":
+        return bat(lines, "--language=markdown")
+    code = bat([line[1:] for line in lines], *([f"--file-name={file}"] if file else []))
+    return [" > " + SIGN.get(line[:1], line[:1]) + text for line, text in zip(lines, code)]
+
+
+sys.stdin.reconfigure(errors="replace")
+headers, _, body = sys.stdin.read().partition("\n\n")
+print(headers + "\n")
+
+segments = []
+file = ""
+fence = False
+previous = ""
+
+
+def append(kind, line):
+    global previous
+    if not segments or segments[-1][0] != kind:
+        segments.append((kind, file, []))
+    segments[-1][2].append(line)
+    previous = line
+
+
+for line in body.splitlines():
+    if line == "-- ":
+        break
+    if re.fullmatch(r"<!--.*-->|</?details>", line):
+        continue
+    if match := re.search(r"discussion on (\S+): ", line):
+        file = match[1]
+    if re.match(r" >( |$)", line):
+        append("diff", line[3:])
+        continue
+    line = html.unescape(re.sub(r"^<summary>(.*)</summary>$", r"> \1", line))
+    fence ^= line.startswith("```")
+    if not fence:
+        if line == "" and previous == "":
+            continue
+        if match := re.search(r": (https?://\S+)$", line):
+            append("markdown", line[:match.start() + 1])
+            line = match[1]
+    append("markdown", line)
+
+for segment in segments:
+    print("\n".join(render(segment)))
