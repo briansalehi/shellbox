@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Pager filter for GitLab notifications: drops the footer and HTML noise,
+# then highlights the markdown body.
+
+awk '
+    !body { print; if ($0 == "") body = 1; next }
+    /^-- $/ { exit }
+    /^<!--.*-->$/ || /^<\/?details>$/ { next }
+    { sub(/^<summary>/, "> "); sub(/<\/summary>$/, "") }
+    /^$/ { if (blank++ || !started) next; print; next }
+    { blank = 0; started = 1; print }
+' | awk '
+    !body { print; if ($0 == "") body = 1; next }
+    { print | "bat --language=markdown --color=always --theme=ansi --style=plain --paging=never" }
+'
