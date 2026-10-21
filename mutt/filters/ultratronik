@@ -20,7 +20,7 @@ NOISE = [
     r"(Benötigen Sie Hilfe\?|Need help\?) .*",
     r"(Für Organisatoren|For organizers): .*",
     r"━+",
-    r"[-•·●○] *",
+    r"[-*•·●○] *",
     r".*\[-- Autoview using .* --\]",
 ]
 
@@ -90,7 +90,7 @@ def clean(lines):
     for index, line in enumerate(lines):
         line = re.sub(SAFELINK, unwrap, line).replace("\xa0", " ").rstrip()
         line = re.sub(r"([\w.+-]+@[\w.-]+)<mailto:\1>", r"\1", line)
-        line = re.sub(r"(?<=\S)<((?:https?|mailto):)", r" <\1", line)
+        line = re.sub(r"(?<=\S)<((?:https?|mailto|onenote):)", r" <\1", line)
         line = re.sub(r"\[cid:([^@\]]+)@[^\]]*\]", r"[image: \1]", line)
         if any(re.fullmatch(pattern, line.strip()) for pattern in NOISE):
             continue

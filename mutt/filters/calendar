@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+# Mailcap command for calendar invites: renders the event of a text/calendar part
+# as a short summary followed by its description.
+
+import datetime
+import re
+import sys
+
+METHODS = {"REQUEST": "Invitation", "CANCEL": "Cancelled", "REPLY": "Reply", "PUBLISH": "Event"}
+ANSWERS = {"ACCEPTED": "accepted", "DECLINED": "declined", "TENTATIVE": "tentatively accepted"}
+DAYS = {"MO": "Mon", "TU": "Tue", "WE": "Wed", "TH": "Thu", "FR": "Fri", "SA": "Sat", "SU": "Sun"}
+UNITS = {"DAILY": "day", "WEEKLY": "week", "MONTHLY": "month", "YEARLY": "year"}
+
+
+def unescape(value):
+    return re.sub(r"\\(.)", lambda match: "\n" if match[1] in "nN" else match[1], value)
+
+
+def parse(text):
+    """Returns the calendar method and the properties of the first event as {name: [(params, value)]}."""
+    method, event, properties = "", False, {}
+    for line in re.sub(r"\r?\n[ \t]", "", text).splitlines():
+        name, _, value = line.partition(":")
+        name, *params = re.findall(r'(?:[^;"]|"[^"]*")+', name)
+        params = dict(param.partition("=")[::2] for param in params)
+        if name == "METHOD":
+            method = value
+        elif line == "BEGIN:VEVENT":
+            event = True
+        elif line == "END:VEVENT":
+            break
+        elif event:
+            properties.setdefault(name.upper(), []).append((params, value))
+    return method, properties
+
+
+def moment(prop):
+    params, value = prop
+    if params.get("VALUE") == "DATE" or len(value) == 8:
+        return datetime.datetime.strptime(value[:8], "%Y%m%d").date()
+    time = datetime.datetime.strptime(value[:15], "%Y%m%dT%H%M%S")
+    if value.endswith("Z"):
+        time = time.replace(tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+    return time
+
+
+def when(start, end):
+    if not isinstance(start, datetime.datetime):
+        last = end - datetime.timedelta(days=1) if end else start
+        days = start.strftime("%a %d.%m.%Y") + (last.strftime(" – %a %d.%m.%Y") if last != start else "")
+        return days + " (all day)"
+    text = start.strftime("%a %d.%m.%Y %H:%M")
+    if end and end.date() == start.date():
+        return text + end.strftime("–%H:%M")
+    return text + (end.strftime(" – %a %d.%m.%Y %H:%M") if end else "")
+
+
+def repeats(rule):
+    rule = dict(part.partition("=")[::2] for part in rule.split(";"))
+    interval = int(rule.get("INTERVAL", 1))
+    unit = UNITS.get(rule.get("FREQ"), rule.get("FREQ", "").lower())
+    text = f"every {unit}" if interval == 1 else f"every {interval} {unit}s"
+    if days := rule.get("BYDAY"):
+        text += " on " + ", ".join(DAYS.get(day[-2:], day) for day in days.split(","))
+    if until := rule.get("UNTIL"):
+        text += " until " + moment(({}, until)).strftime("%d.%m.%Y")
+    return text
+
+
+def name(prop):
+    params, value = prop
+    return params.get("CN", "").strip('"') or re.sub(r"(?i)^mailto:", "", value)
+
+
+method, event = parse(open(sys.argv[2], encoding=sys.argv[1] or "utf-8", errors="replace").read())
+first = {key: values[0] for key, values in event.items()}
+start = moment(first["DTSTART"]) if "DTSTART" in first else None
+end = moment(first["DTEND"]) if "DTEND" in first else None
+cancelled = method == "CANCEL" or first.get("STATUS", ({}, ""))[1] == "CANCELLED"
+
+rows = [(METHODS.get(method, "Event") if not cancelled else "Cancelled", unescape(first.get("SUMMARY", ({}, ""))[1]))]
+if start:
+    rows.append(("When", when(start, end) + (" (this occurrence)" if "RECURRENCE-ID" in first else "")))
+if "RRULE" in first:
+    rows.append(("Repeats", repeats(first["RRULE"][1])))
+if location := unescape(first.get("LOCATION", ({}, ""))[1]):
+    rows.append(("Where", location))
+if "ORGANIZER" in first:
+    rows.append(("Organizer", name(first["ORGANIZER"])))
+attendees = event.get("ATTENDEE", [])
+if method == "REPLY":
+    rows += [("Answer", f"{name(attendee)} {ANSWERS.get(attendee[0].get('PARTSTAT'), 'answered')}") for attendee in attendees]
+elif attendees:
+    rows.append(("Attendees", str(len(attendees))))
+
+width = max(len(label) for label, _ in rows)
+print("\n".join(f"{label + ':':<{width + 1}} {value}" for label, value in rows))
+description = "\n".join(unescape(value) for _, value in event.get("DESCRIPTION", [])).strip()
+if description:
+    print("\n" + description)

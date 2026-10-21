@@ -43,8 +43,8 @@ set message_cachedir =~/.config/mutt/cache/bodies
 set certificate_file =~/.config/mutt/certificates
 
 # w3m
-auto_view text/html
-alternative_order text/plain text/enriched text/html
+auto_view text/html text/calendar
+alternative_order text/calendar text/plain text/enriched text/html
 set mailcap_path = ~/.config/mutt/mailcap
 
 # gitlab, jira, playbook and ultratronik mails

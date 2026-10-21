@@ -1,1 +1,2 @@
 text/html; ~/.config/mutt/filters/ultratronik %{charset} %s; copiousoutput;
+text/calendar; ~/.config/mutt/filters/calendar %{charset} %s; copiousoutput;
