@@ -6,10 +6,25 @@ awk '
     !body { print; if ($0 == "") body = 1; next }
     /^-- $/ { exit }
     /^<!--.*-->$/ || /^<\/?details>$/ { next }
-    { sub(/^<summary>/, "> "); sub(/<\/summary>$/, "") }
-    /^$/ { if (blank++ || !started) next; print; next }
+    /^ >( |$)/ {
+        if (!diff) { print "```diff"; diff = 1 }
+        print substr($0, 4); started = 1; blank = 0; next
+    }
+    diff { print "```"; diff = 0 }
+    {
+        sub(/^<summary>/, "> "); sub(/<\/summary>$/, "")
+        gsub(/&lt;/, "<"); gsub(/&gt;/, ">"); gsub(/&quot;/, "\""); gsub(/&#39;/, "\047"); gsub(/&amp;/, "\\&")
+    }
+    /^```/ { fence = !fence }
+    !fence && match($0, /: https?:\/\/[^ ]+$/) {
+        print substr($0, 1, RSTART); $0 = substr($0, RSTART + 2)
+    }
+    /^$/ { if (!fence && (blank++ || !started)) next; print; next }
     { blank = 0; started = 1; print }
 ' | awk '
-    !body { print; if ($0 == "") body = 1; next }
-    { print | "bat --language=markdown --color=always --theme=ansi --style=plain --paging=never" }
+    BEGIN { bat = "bat --color=always --theme=ansi --style=plain --paging=never --language=" }
+    !body { print; if ($0 == "") { body = 1; fflush() }; next }
+    /^```diff$/ { close(bat "markdown"); diff = 1; next }
+    diff && /^```$/ { close(bat "diff"); diff = 0; next }
+    { print | (bat (diff ? "diff" : "markdown")) }
 '
