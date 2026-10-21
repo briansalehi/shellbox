@@ -1,0 +1,1 @@
+text/html; ~/.config/mutt/filters/ultratronik %{charset} %s; copiousoutput;

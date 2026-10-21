@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+# Filter for mails from Ultratronik colleagues, sent through Outlook.
+# With arguments it is the mailcap command: renders the html part as plain text
+# with the real link targets. Without arguments it is the display filter: unwraps
+# safe links, drops Outlook and Teams boilerplate and quotes the earlier messages
+# of a thread, so they get the quote colors.
+
+import html.parser
+import re
+import sys
+import urllib.parse
+
+VOID = {"br", "img", "hr", "meta", "link", "input", "col", "wbr", "area", "base", "source"}
+BLOCK = {"p", "div", "td", "tr", "table", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"}
+SKIP = {"style", "head", "title", "script"}
+SAFELINK = r"https://\w+\.safelinks\.protection\.outlook\.com/[^?\s]*\?url=([^&\s>\]]+)[^\s>\]]*"
+NOISE = [
+    r"\[Das Bild wurde vom Absender entfernt\..*\]",
+    r"(Sie erhalten nicht häufig E-Mails von|You don't often get email from) .*",
+    r"(Benötigen Sie Hilfe\?|Need help\?) .*",
+    r"(Für Organisatoren|For organizers): .*",
+    r"━+",
+    r"[-•·●○] *",
+    r".*\[-- Autoview using .* --\]",
+]
+
+
+class Outlook(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.stack = []
+        self.lists = []
+        self.lines = [""]
+        self.link = None
+
+    def newline(self):
+        if self.lines[-1]:
+            self.lines.append("")
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in BLOCK or tag == "hr":
+            self.newline()
+        if tag in ("ul", "ol"):
+            self.lists.append(0 if tag == "ol" else None)
+        if tag == "li" and self.lists:
+            if self.lists[-1] is not None:
+                self.lists[-1] += 1
+            marker = "-" if self.lists[-1] is None else f"{self.lists[-1]}."
+            self.lines[-1] = "  " * (len(self.lists) - 1) + marker + " "
+        if tag == "br":
+            self.lines.append("")
+        if tag == "a":
+            self.link = (len(self.lines) - 1, len(self.lines[-1]), attrs.get("originalsrc") or attrs.get("href") or "")
+        if tag not in VOID:
+            self.stack.append(tag)
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self.link and self.link[0] == len(self.lines) - 1:
+            _, start, url = self.link
+            label = self.lines[-1][start:].strip()
+            if url.startswith("http") and url.rstrip("/") != label.rstrip("/"):
+                self.lines[-1] = self.lines[-1].rstrip() + f" <{url}> "
+            self.link = None
+        if tag in ("ul", "ol") and self.lists:
+            self.lists.pop()
+        while tag in self.stack:
+            if self.stack.pop() == tag:
+                break
+        if tag in BLOCK:
+            self.newline()
+
+    def handle_data(self, data):
+        if any(tag in SKIP for tag in self.stack):
+            return
+        blank = "\xa0" in data and not data.strip()
+        data = re.sub(r"\s+", " ", data)
+        if not self.lines[-1].strip() or self.lines[-1].endswith(" "):
+            data = data.lstrip()
+        self.lines[-1] += data or (" " if blank and not self.lines[-1] else "")
+
+
+def unwrap(match):
+    return urllib.parse.unquote(match[1])
+
+
+def clean(lines):
+    output = []
+    depth = 0
+    for index, line in enumerate(lines):
+        line = re.sub(SAFELINK, unwrap, line).replace("\xa0", " ").rstrip()
+        line = re.sub(r"([\w.+-]+@[\w.-]+)<mailto:\1>", r"\1", line)
+        line = re.sub(r"(?<=\S)<((?:https?|mailto):)", r" <\1", line)
+        line = re.sub(r"\[cid:([^@\]]+)@[^\]]*\]", r"[image: \1]", line)
+        if any(re.fullmatch(pattern, line.strip()) for pattern in NOISE):
+            continue
+        following = lines[index + 1] if index + 1 < len(lines) else ""
+        if re.match(r"\s*(Von|From): ", line) and re.match(r"\s*(Gesendet|Sent|Datum|Date): ", following):
+            depth += 1
+            output.append("")
+        if line == "" and (not output or output[-1].strip(" >") == ""):
+            continue
+        output.append(("> " * depth + line).rstrip())
+    return output
+
+
+if len(sys.argv) == 3:
+    parser = Outlook()
+    parser.feed(open(sys.argv[2], encoding=sys.argv[1] or "utf-8", errors="replace").read())
+    print("\n".join(line.rstrip() for line in parser.lines).strip("\n"))
+    sys.exit()
+
+sys.stdin.reconfigure(errors="replace")
+headers, _, body = sys.stdin.read().partition("\n\n")
+print(headers + "\n")
+print("\n".join(clean(body.splitlines())))

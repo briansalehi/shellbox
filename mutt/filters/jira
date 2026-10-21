@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+# Pager filter for Jira notifications: unwraps the Outlook safe links, drops the
+# footer, shows field changes as old -> new and renders the wiki markup.
+
+import itertools
+import re
+import shutil
+import subprocess
+import sys
+import textwrap
+import urllib.parse
+
+BAT = ["bat", "--color=always", "--theme=ansi", "--style=plain", "--paging=never"]
+SAFELINK = r"https://\w+\.safelinks\.protection\.outlook\.com/\?url=([^&\s\]]+)[^\s\]]*"
+FIELD = r"(?:\t| {2,})\s*(\S[^:]*): *(.*?) *(?:\(?was: *\(?(.*?)\)?)? *"
+NOISE = {"page", "actionerId", "sourceType"}
+WIDTH = shutil.get_terminal_size().columns
+BOLD, RED, GREEN, YELLOW, RESET = "\033[1m", "\033[31m", "\033[32m", "\033[1;33m", "\033[0m"
+
+
+def bat(lines, *args):
+    result = subprocess.run(BAT + list(args), input="\n".join(lines) + "\n", capture_output=True, text=True)
+    return result.stdout.splitlines()
+
+
+def unwrap(match):
+    url = urllib.parse.urlsplit(urllib.parse.unquote(match[1]).replace("%7C", "|"))
+    query = [(key, value) for key, value in urllib.parse.parse_qsl(url.query) if key not in NOISE]
+    return url._replace(query=urllib.parse.urlencode(query)).geturl()
+
+
+def link(match):
+    return match[2] if match[1] == match[2] else f"[{match[1]}]({match[2]})"
+
+
+def inline(line):
+    line = re.sub(r"\[~accountid:[^\]]*\]", "@user", line)
+    line = re.sub(r"\[~([^\]]+)\]", r"@\1", line)
+    line = re.sub(r"\[([^|\[\]]+)\|([^|\[\]]+)(?:\|[^\[\]]*)?\]", link, line)
+    line = re.sub(r"\[(\w+://[^\[\]\s]+)\]", r"\1", line)
+    line = re.sub(r"!([^!|\s]+\.\w+)(?:\|[^!]*)?!", r"[image: \1]", line)
+    line = re.sub(r"\{\{(.+?)\}\}", r"`\1`", line)
+    line = re.sub(r"\{(?:color|panel)[^}]*\}", "", line)
+    line = re.sub(r"(?<![\w*])\*(\S(?:[^*]*?\S)?)\*(?![\w*])", r"**\1**", line)
+    return re.sub(r"(?<![\w_])_(\S(?:[^_]*?\S)?)_(?![\w_])", r"*\1*", line)
+
+
+def code(match):
+    language = re.search(r"(?:^|language=)(\w+)(?:\||$)", match[2] or "")
+    return "```" + (language[1] if language else "") + "\n" + match[3] + "\n```"
+
+
+def emphasize(lines):
+    bold = False
+    for line in lines:
+        pieces = line.split("**")
+        styled = YELLOW + pieces[0] if bold else pieces[0]
+        for piece in pieces[1:]:
+            styled += "**" + RESET + piece if bold else YELLOW + "**" + piece
+            bold = not bold
+        yield styled + RESET
+
+
+def rule(widths, left, middle, right):
+    return left + middle.join("─" * (width + 2) for width in widths) + right
+
+
+def table(rows):
+    cells = [[cell.strip() for cell in re.split(r"\|\|?", row.strip().strip("|"))] for row in rows]
+    count = max(map(len, cells))
+    cells = [row + [""] * (count - len(row)) for row in cells]
+    widths = [max(len(row[column]) for row in cells) for column in range(count)]
+    while sum(widths) + 3 * count + 1 > WIDTH and max(widths) > 1:
+        widths[widths.index(max(widths))] -= 1
+    lines = [rule(widths, "┌", "┬", "┐")]
+    for row in cells:
+        wrapped = [emphasize([f"{part:<{width}}" for part in textwrap.wrap(cell, width) or [""]])
+                   for cell, width in zip(row, widths)]
+        for parts in itertools.zip_longest(*wrapped):
+            lines.append("│" + "│".join(f" {part or ' ' * width} " for part, width in zip(parts, widths)) + "│")
+        lines.append(rule(widths, "├", "┼", "┤"))
+    lines[-1] = rule(widths, "└", "┴", "┘")
+    return lines
+
+
+def markup(lines):
+    text = "\n".join(line.rstrip() for line in lines).strip("\n")
+    text = re.sub(r"\{(code|noformat)(?::([^}]*))?\}\n?(.*?)\n?\{\1\}", code, text, flags=re.S)
+    text = re.sub(r"\{quote\}\n?(.*?)\n?\{quote\}", lambda match: re.sub("^", "> ", match[1], flags=re.M), text,
+                  flags=re.S)
+    blocks = []
+    numbers = []
+    fence = False
+    previous = ""
+    for line in text.splitlines():
+        kind = "markdown"
+        fence ^= line.startswith("```")
+        if not fence:
+            if line == "" and previous == "":
+                continue
+            if line.startswith("|"):
+                kind = "table"
+            if match := re.fullmatch(r"([*#]+|-) +(.*)", line):
+                depth = len(match[1])
+                numbers = numbers[:depth] + [0] * (depth - len(numbers))
+                numbers[-1] += match[1].endswith("#")
+                line = "   " * (depth - 1) + (f"{numbers[-1]}." if match[1].endswith("#") else "-") + " " + match[2]
+            else:
+                numbers = []
+            line = re.sub(r"^h([1-6])\. *", lambda match: "#" * int(match[1]) + " ", line)
+            line = inline(re.sub(r"^bq\. *", "> ", line))
+        if not blocks or blocks[-1][0] != kind:
+            blocks.append((kind, []))
+        blocks[-1][1].append(line)
+        previous = line
+    return [line for kind, block in blocks
+            for line in (table(block) if kind == "table" else bat(block, "--language=markdown"))]
+
+
+def fields(rows, diff):
+    width = max(len(name) for name, _, _ in rows)
+    for name, new, old in rows:
+        if diff and old is not None:
+            new = f"{RED}{old or '(none)'}{RESET} → {GREEN}{new or '(none)'}{RESET}"
+        elif diff:
+            new = GREEN + new + RESET
+        output.append(f"{BOLD}{name:>{width}}:{RESET} {new}")
+
+
+def blank():
+    if output and output[-1]:
+        output.append("")
+
+
+def section(text, diff):
+    lines = text.splitlines()
+    rows = []
+    while lines and (re.fullmatch(FIELD, lines[0]) or not lines[0].strip()):
+        if match := re.fullmatch(FIELD, lines.pop(0)):
+            rows.append(match.groups())
+    if rows:
+        fields(rows, diff)
+    if lines := markup(lines):
+        blank()
+        output.extend(lines)
+
+
+sys.stdin.reconfigure(errors="replace")
+headers, _, body = sys.stdin.read().partition("\n\n")
+print(headers + "\n")
+
+body = re.sub(SAFELINK, unwrap, body.rpartition("\n--\n")[0] or body)
+parts = re.split(r"^(.+)\n-{3,}$", body, maxsplit=1, flags=re.M)
+head, title, rest = parts if len(parts) == 3 else ("", "", body)
+parts = re.split(r"^> (.+)\n> -{3,}$", rest, maxsplit=1, flags=re.M)
+change, summary, issue = parts if len(parts) == 3 else (rest, "", "")
+issue = re.sub(r"^> ?", "", re.match(r"(?:(?:>.*|[ \t]*)\n)*", issue + "\n")[0], flags=re.M)
+
+output = [BOLD + " ".join(title.split()).rstrip(":") + RESET] if title else []
+if (match := re.search(r"\[ *(\S+?) *\]", head)) and match[1] not in issue:
+    output.append(match[1])
+blank()
+section(change, diff=True)
+if summary:
+    blank()
+    output.append(BOLD + summary.strip() + RESET)
+    section(issue, diff=False)
+print("\n".join(output))

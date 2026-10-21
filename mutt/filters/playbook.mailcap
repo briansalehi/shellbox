@@ -1,0 +1,1 @@
+text/html; ~/.config/mutt/filters/playbook %{charset} %s; copiousoutput;

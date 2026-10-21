@@ -47,10 +47,13 @@ auto_view text/html
 alternative_order text/plain text/enriched text/html
 set mailcap_path = ~/.config/mutt/mailcap
 
-# gitlab notifications
+# gitlab, jira, playbook and ultratronik mails
 subjectrx '\[Extern\] *' '%L%R'
-message-hook . 'unset display_filter; unset allow_ansi; reset quote_regex'
-message-hook '~f gitlab@u-experten.de' 'set display_filter = ~/.config/mutt/gitlab-filter; set allow_ansi; set quote_regex = "^$"'
+message-hook . 'unset display_filter; unset allow_ansi; reset quote_regex; set mailcap_path = ~/.config/mutt/mailcap'
+message-hook '~f gitlab@u-experten.de' 'set display_filter = ~/.config/mutt/filters/gitlab; set allow_ansi; set quote_regex = "^$"'
+message-hook '~f jira@u-experten.atlassian.net' 'set display_filter = ~/.config/mutt/filters/jira; set allow_ansi; set quote_regex = "^$"'
+message-hook '~f @ultratronik.de' 'set mailcap_path = ~/.config/mutt/filters/ultratronik.mailcap; set display_filter = ~/.config/mutt/filters/ultratronik'
+message-hook '~f jbosch@ultratronik.de ~s "^What.s new in Software U"' 'set mailcap_path = ~/.config/mutt/filters/playbook.mailcap; set display_filter = ~/.config/mutt/filters/playbook; set allow_ansi; set quote_regex = "^$"'
 
 # urlscan
 set wait_key = no

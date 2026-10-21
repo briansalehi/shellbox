@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+# Filter for the weekly "What's new in Software U" playbook newsletter.
+# With arguments it is the mailcap command: renders the html part as markdown,
+# picking the role of each block from the font size of the newsletter template.
+# Without arguments it is the display filter: drops the autoview line and
+# highlights the markdown.
+
+import html.parser
+import re
+import subprocess
+import sys
+
+BAT = ["bat", "--color=always", "--theme=ansi", "--style=plain", "--paging=never"]
+VOID = {"br", "img", "hr", "meta", "link", "input", "col", "wbr", "area", "base", "source"}
+BLOCK = {"p", "div", "td", "tr", "table", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6"}
+MARK = {"b": "**", "strong": "**", "i": "*", "em": "*"}
+
+
+class Newsletter(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.stack = []
+        self.blocks = []
+        self.text = ""
+        self.style = None
+        self.link = None
+
+    def flush(self):
+        if self.text.strip():
+            self.blocks.append((self.style, self.text.strip(), any(tag == "li" for tag, _ in self.stack)))
+        self.text, self.style = "", None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in BLOCK:
+            self.flush()
+        if tag in MARK and not self.skipped():
+            if not self.text.endswith("*"):
+                self.text = self.text.rstrip() + (" " if self.text.strip() else "")
+            self.text += MARK[tag]
+        if tag == "a":
+            self.link = (len(self.text), attrs.get("originalsrc") or attrs.get("href", ""))
+        if tag not in VOID:
+            self.stack.append((tag, attrs.get("style") or ""))
+
+    def handle_endtag(self, tag):
+        if tag in MARK and not self.skipped():
+            spaced = self.text != self.text.rstrip()
+            self.text = self.text.rstrip() + MARK[tag] + (" " if spaced else "")
+        if tag == "a" and self.link:
+            start, url = self.link
+            label = self.text[start:].strip().rstrip("↗").strip()
+            self.text = self.text[:start] + (url if label in (url, url.rstrip("/")) else f"[{label}]({url})") + " "
+            self.link = None
+        while any(open_tag == tag for open_tag, _ in self.stack):
+            if self.stack.pop()[0] == tag:
+                break
+        if tag in BLOCK:
+            self.flush()
+
+    def skipped(self):
+        return any(tag in ("style", "head", "title", "script") for tag, _ in self.stack)
+
+    def handle_data(self, data):
+        if self.skipped():
+            return
+        data = re.sub(r"\s+", " ", data)
+        if not self.text or self.text[-1] == " " or self.text.endswith(("**", "*")) and self.text.rstrip("*")[-1:] == " ":
+            data = data.lstrip()
+        if data and self.style is None:
+            css = ";".join(style for _, style in self.stack)
+            size = re.findall(r"font-size: *(\d+)px", css)
+            self.style = (int(size[-1]) if size else 0, "uppercase" in css,
+                          int((re.findall(r"font-weight: *(\d+)", css) or [0])[-1]) >= 700)
+        self.text += data
+
+
+def render(blocks):
+    lines = []
+    number = label = prefix = None
+    started = False
+    for (size, upper, bold), text, item in blocks:
+        if size >= 28:
+            started = True
+            lines += [f"# {text}", ""]
+            continue
+        if not started:
+            continue
+        if size == 12 and bold and text.isdigit():
+            number = text
+        elif size == 11 and upper and number:
+            lines += ["", f"## {number} · {text}"]
+            number = None
+        elif size == 11 and upper:
+            label = text
+        elif size >= 22:
+            lines += [f"*{text}*", ""]
+        elif size >= 17:
+            lines += ["", f"### {text}"] + ([f"*{label}*"] if label else []) + [""]
+            label = None
+        elif len(text) == 1 and not text.isalnum():
+            prefix = text
+        elif re.fullmatch(r"(\[[^]]*\]\([^)]*\) *)+", text):
+            lines += [""] + [f"- {link}" for link in re.findall(r"\[[^]]*\]\([^)]*\)", text)] + [""]
+        elif size == 12:
+            break
+        elif item:
+            lines.append(f"- {text}")
+        else:
+            lines += ["", f"{prefix} {text}" if prefix else text, ""]
+            prefix = None
+    text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
+    return re.sub(r"(\n- \[.*)\n\n(?=- \[)", r"\1\n", text).strip()
+
+
+def bat(lines, *args):
+    result = subprocess.run(BAT + list(args), input="\n".join(lines) + "\n", capture_output=True, text=True)
+    return result.stdout.splitlines()
+
+
+if len(sys.argv) == 3:
+    parser = Newsletter()
+    parser.feed(open(sys.argv[2], encoding=sys.argv[1] or "utf-8", errors="replace").read())
+    parser.flush()
+    print(render(parser.blocks))
+    sys.exit()
+
+sys.stdin.reconfigure(errors="replace")
+headers, _, body = sys.stdin.read().partition("\n\n")
+print(headers + "\n")
+lines = [line for line in body.splitlines() if not re.search(r"\[-- Autoview using .* --\]$", line)]
+print("\n".join(bat(lines, "--language=markdown")))
