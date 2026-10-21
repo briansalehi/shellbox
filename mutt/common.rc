@@ -54,8 +54,8 @@ message-hook '~f gitlab@u-experten.de' 'set display_filter = ~/.config/mutt/gitl
 
 # urlscan
 set wait_key = no
-macro index,pager \cb "<pipe-message> urlscan<Enter>" "call urlscan to extract URLs out of a message"
-macro attach,compose \cb "<pipe-entry> urlscan<Enter>" "call urlscan to extract URLs out of a message"
+macro index,pager \cb "<enter-command>set pipe_decode<enter><pipe-message>urlscan -d -W<enter><enter-command>unset pipe_decode<enter>" "call urlscan to extract URLs out of a message"
+macro attach,compose \cb "<pipe-entry>urlscan -d -W<enter>" "call urlscan to extract URLs out of a message"
 
 # notifications
 set new_mail_command = "notify-send --icon=mail-unread --urgency=normal 'Neomutt' '%n new emails in %f' &"
