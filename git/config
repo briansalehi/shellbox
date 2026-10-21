@@ -1,0 +1,35 @@
+# symlink to ~/.config/git/config
+[core]
+    pager = delta
+[interactive]
+    diffFilter = delta --color-only
+[delta]
+    keep-plus-minus-markers = true
+    plus-style = syntax
+    minus-style = syntax
+    navigate = true
+[alias]
+	report = log --oneline --graph --decorate --all -n 20
+	pullhead = !sh -c \"git pull $(git remote) $(git rev-parse --abbrev-ref HEAD)\"
+	update = !sh -c \"git fetch --prune --tags $(git remote)\"
+[init]
+	defaultBranch = master
+[maintenance "prefetch"]
+	enabled = false
+[maintenance "commit-graph"]
+	enabled = false
+[maintenance "gc"]
+	enabled = true
+[pull]
+	rebase = true
+	ff = true
+[maintenance "loose-objects"]
+	enabled = false
+[maintenance "incremental-repack"]
+	enabled = false
+[commit]
+	gpgsign = false
+[sendemail]
+    smtpserver = /usr/bin/msmtp
+    confirm = always
+    annotate = yes
