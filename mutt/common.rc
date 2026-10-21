@@ -15,8 +15,8 @@ unset use_domain
 unset resolve
 
 # imap
-set timeout = 60
-set mail_check = 60
+set timeout = 10
+set mail_check = 10
 set imap_keepalive = 300
 set imap_idle = yes
 set imap_check_subscribed = yes
