@@ -14,8 +14,11 @@ BAT = ["bat", "--color=always", "--theme=ansi", "--style=plain", "--paging=never
 SAFELINK = r"https://\w+\.safelinks\.protection\.outlook\.com/\?url=([^&\s\]]+)[^\s\]]*"
 FIELD = r"(?:\t| {2,})\s*(\S[^:]*): *(.*?) *(?:\(?was: *\(?(.*?)\)?)? *"
 NOISE = {"page", "actionerId", "sourceType"}
+DUE = (r"^([A-Z][A-Z0-9]*-\d+)\n\[(https?://[^?\]]+)[^\]]*\]((?:(?!\nCalendar Icon\n).)*?)\n"
+       r"Calendar Icon\n\[[^\]]*calendar-(\w+)-bg[^\]]*\](\w+)\n(\d+)$")
 WIDTH = shutil.get_terminal_size().columns
 BOLD, RED, GREEN, YELLOW, RESET = "\033[1m", "\033[31m", "\033[32m", "\033[1;33m", "\033[0m"
+COLOR = {"red": RED, "amber": YELLOW}
 
 
 def bat(lines, *args):
@@ -145,11 +148,27 @@ def section(text, diff):
         output.extend(lines)
 
 
+def due(body):
+    """Renders the due date digest as one line per work item: due date, key, summary and link."""
+    items = re.findall(DUE, body, flags=re.M | re.S)
+    intro = body[:re.search(DUE, body, flags=re.M | re.S).start()].splitlines()
+    intro = [line for line in intro if line and not re.fullmatch(r"Jira logo|\[.*\]|Hi .*,", line)]
+    lines = [BOLD + intro[0] + RESET, ""] + intro[1:] + [""] if intro else []
+    width = max(len(key) for key, *_ in items)
+    for key, url, summary, color, month, day in items:
+        lines.append(f"{COLOR.get(color, '')}{month} {day:>2}{RESET}  {BOLD}{key:<{width}}{RESET}  {' '.join(summary.split())}")
+        lines.append(" " * (width + 10) + url)
+    print("\n".join(lines))
+
+
 sys.stdin.reconfigure(errors="replace")
 headers, _, body = sys.stdin.read().partition("\n\n")
 print(headers + "\n")
 
 body = re.sub(SAFELINK, unwrap, body.rpartition("\n--\n")[0] or body)
+if re.search(DUE, body, flags=re.M | re.S):
+    due(body)
+    sys.exit()
 parts = re.split(r"^(.+)\n-{3,}$", body, maxsplit=1, flags=re.M)
 head, title, rest = parts if len(parts) == 3 else ("", "", body)
 parts = re.split(r"^> (.+)\n> -{3,}$", rest, maxsplit=1, flags=re.M)
