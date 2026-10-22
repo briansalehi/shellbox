@@ -1,2 +1,2 @@
-text/html; w3m -I %{charset} -T text/html -dump -cols 80 -o display_link=false -o display_link_number=true %s; copiousoutput;
+text/html; ~/.config/mutt/filters/html %{charset} %s; copiousoutput;
 text/calendar; ~/.config/mutt/filters/calendar %{charset} %s; copiousoutput;

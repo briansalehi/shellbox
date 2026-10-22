@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+# Mailcap command for html parts: strips what a mail client hides or only uses for
+# layout (preheaders, images, layout tables, centering), renders the rest with w3m
+# and drops the invisible padding characters left behind.
+
+import html.parser
+import re
+import subprocess
+import sys
+
+VOID = {"br", "img", "hr", "meta", "link", "input", "col", "wbr", "area", "base", "source"}
+SKIP = {"style", "head", "title", "script"}
+HIDDEN = re.compile(r"display\s*:\s*none|visibility\s*:\s*hidden|mso-hide\s*:\s*all", re.I)
+LAYOUT = {"table": "div", "tbody": "div", "thead": "div", "tfoot": "div", "tr": "div", "td": "div", "th": "div", "center": "div"}
+INVISIBLE = re.compile("[\u00ad\u034f\u200b-\u200f\u2060\ufeff]")
+SPACE = re.compile("[\u00a0\u2007\u202f]")
+
+
+class Cleaner(html.parser.HTMLParser):
+    def __init__(self, layout):
+        super().__init__(convert_charrefs=False)
+        self.layout = layout
+        self.out = []
+        self.stack = []
+        self.hidden = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        hide = tag in SKIP or attrs.get("aria-hidden") == "true" or "hidden" in attrs or HIDDEN.search(attrs.get("style") or "")
+        if tag not in VOID:
+            self.stack.append((tag, hide))
+            self.hidden += bool(hide)
+        if self.hidden or tag == "img":
+            return
+        if tag in self.layout:
+            tag = LAYOUT[tag]
+        keep = {key: value for key, value in attrs.items() if key in ("href", "colspan", "rowspan")}
+        self.out.append(f"<{tag}" + "".join(f' {key}="{html.escape(value or "")}"' for key, value in keep.items()) + ">")
+
+    def handle_endtag(self, tag):
+        if tag in VOID or not any(open_tag == tag for open_tag, _ in self.stack):
+            return
+        while self.stack:
+            open_tag, hide = self.stack.pop()
+            if not self.hidden:
+                self.out.append(f"</{LAYOUT.get(open_tag, open_tag) if open_tag in self.layout else open_tag}>")
+            self.hidden -= bool(hide)
+            if open_tag == tag:
+                break
+
+    def handle_data(self, data):
+        if not self.hidden:
+            self.out.append(data)
+
+    def handle_entityref(self, name):
+        self.handle_data(f"&{name};")
+
+    def handle_charref(self, name):
+        self.handle_data(f"&#{name};")
+
+
+charset, path = sys.argv[1] or "utf-8", sys.argv[2]
+with open(path, encoding=charset, errors="replace") as file:
+    source = file.read()
+
+cleaner = Cleaner(set(LAYOUT))
+cleaner.feed(source)
+cleaner.close()
+
+w3m = ["w3m", "-I", "utf-8", "-O", "utf-8", "-T", "text/html", "-dump", "-cols", "80", "-o", "display_link=false", "-o", "display_link_number=true"]
+text = subprocess.run(w3m, input="".join(cleaner.out), capture_output=True, text=True).stdout
+text = SPACE.sub(" ", INVISIBLE.sub("", text))
+text = re.sub(r"\[\d+\] *(?=\[\d+\]|$)", "", text, flags=re.M)
+text = re.sub(r"[ \t]+$", "", text, flags=re.M)
+print(re.sub(r"\n{3,}", "\n\n", text).strip("\n"))
