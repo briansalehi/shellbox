@@ -142,3 +142,4 @@ fi
 
 alias poweroff="(sleep 0.5 && poweroff); kill $(pgrep tmux | xargs)"
 alias reboot="(sleep 0.5 && reboot); kill $(pgrep tmux | xargs)"
+. "$HOME/.cargo/env"
