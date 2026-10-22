@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+# timeout-hook for the Outlook account. Outlook drops the IMAP session when its
+# access token expires and answers every later command with "BAD Command received
+# in Invalid state", which empties the index. Once the token recorded by
+# oauth2-token has expired, log out and reopen the inbox, so neomutt logs in again
+# with a fresh token.
+
+expiry="${HOME}/.config/mutt/cache/imap-token-expiry"
+
+if [ -s "${expiry}" ] && [ "$(date +%s)" -ge "$(cat "${expiry}")" ]
+then
+    rm -f "${expiry}"
+    echo 'push "<imap-logout-all><change-folder>!<enter>"'
+fi

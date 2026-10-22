@@ -4,7 +4,7 @@ set realname = 'Hossein Salehipour'
 # IMAP
 set imap_user = 'hsalehipour@ultratronik.de'
 set imap_authenticators = 'xoauth2'
-set imap_oauth_refresh_command = "/usr/local/share/neomutt/oauth2/mutt_oauth2.py ~/.config/mutt/hsalehipour@ultratronik.de.tokens"
+set imap_oauth_refresh_command = "~/.config/mutt/oauth2-token ~/.config/mutt/hsalehipour@ultratronik.de.tokens"
 set folder = 'imaps://outlook.office365.com/'
 set spoolfile = +Inbox
 set postponed = +Drafts
@@ -12,6 +12,9 @@ set record = "+Sent Items"
 set mbox = +Inbox
 set trash = +"Deleted Items"
 mailboxes +Inbox +Drafts +"Sent Items" +"Deleted Items" +"Junk Email" +Notes +Archive +"Conversation History" +"RSS-Abonnements"
+
+# reconnect once outlook invalidates the session with the expired token
+timeout-hook 'source "~/.config/mutt/imap-reconnect |"'
 
 # SMTP
 set sendmail = '/usr/bin/msmtp'

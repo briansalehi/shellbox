@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# imap_oauth_refresh_command for the Outlook account: prints the access token from
+# mutt_oauth2.py and records when it expires, so imap-reconnect knows when Outlook
+# invalidates the session that logged in with it.
+
+helper=/usr/local/share/neomutt/oauth2/mutt_oauth2.py
+tokenfile="$1"
+expiry="${HOME}/.config/mutt/cache/imap-token-expiry"
+
+"${helper}" "${tokenfile}" || exit
+
+gpg --quiet --decrypt "${tokenfile}" 2>/dev/null |
+    python3 -c 'import datetime, json, sys; print(int(datetime.datetime.fromisoformat(json.load(sys.stdin)["access_token_expiration"]).timestamp()))' \
+    > "${expiry}.tmp" && mv "${expiry}.tmp" "${expiry}"
+rm -f "${expiry}.tmp"
