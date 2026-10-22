@@ -4,7 +4,7 @@
 [interactive]
     diffFilter = delta --color-only
 [delta]
-    keep-plus-minus-markers = true
+    line-numbers = true
     plus-style = syntax
     minus-style = syntax
     navigate = true
