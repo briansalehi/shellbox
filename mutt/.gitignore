@@ -3,3 +3,4 @@ cache/
 *.asc
 *.tokens
 certificates
+__pycache__/
