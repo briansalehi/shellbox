@@ -75,6 +75,7 @@ export GPG_TTY=$(tty)
 export EDITOR=$(type -p nvim)
 # Less colors for man pages
 export PAGER='/usr/bin/less'
+export GLAB_PAGER='delta'
 # Begin blinking
 export LESS_TERMCAP_mb=$(tput bold; tput setaf 1)
 # Begin bold
