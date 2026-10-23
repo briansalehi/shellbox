@@ -50,7 +50,8 @@ set mailcap_path = ~/.config/mutt/mailcap
 
 # gitlab, jira, playbook and ultratronik mails
 subjectrx '\[Extern\] *' '%L%R'
-message-hook . 'unset display_filter; unset allow_ansi; reset quote_regex; set mailcap_path = ~/.config/mutt/mailcap'
+message-hook . 'unset display_filter; unset allow_ansi; reset quote_regex; set mailcap_path = ~/.config/mutt/mailcap; unalternative_order *; alternative_order text/calendar text/plain text/enriched text/html'
+message-hook '~f @info.kununu.com' 'unalternative_order *; alternative_order text/calendar text/html'
 message-hook '~f gitlab@u-experten.de' 'set display_filter = ~/.config/mutt/filters/gitlab; set allow_ansi; set quote_regex = "^$"'
 message-hook '~f jira@u-experten.atlassian.net' 'set display_filter = ~/.config/mutt/filters/jira; set allow_ansi; set quote_regex = "^$"'
 message-hook '~f @ultratronik.de' 'set mailcap_path = ~/.config/mutt/filters/ultratronik.mailcap; set display_filter = ~/.config/mutt/filters/ultratronik'
