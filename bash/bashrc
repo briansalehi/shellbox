@@ -130,6 +130,7 @@ include_path "$ANDROID_HOME/cmdline-tools/latest"
 include_path "$ANDROID_HOME/platform-tools"
 include_path "$HOME/.resend"
 include_path "$HOME/.cargo"
+include_path "$HOME/go"
 include_path "$HOME/.local"
 include_path "$HOME/.opencode"
 
