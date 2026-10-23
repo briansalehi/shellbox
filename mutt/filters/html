@@ -7,6 +7,7 @@ import html.parser
 import re
 import subprocess
 import sys
+import urllib.parse
 
 VOID = {"br", "img", "hr", "meta", "link", "input", "col", "wbr", "area", "base", "source"}
 SKIP = {"style", "head", "title", "script"}
@@ -16,6 +17,15 @@ INVISIBLE = re.compile("[\u00ad\u034f\u200b-\u200f\u2060\ufeff]")
 SPACE = re.compile("[\u00a0\u2007\u202f]")
 
 
+def target(attrs):
+    """Link target with outlook safelinks unwrapped, or None for an empty link."""
+    href = attrs.get("originalsrc") or attrs.get("href") or ""
+    url = urllib.parse.urlsplit(href)
+    if url.hostname and url.hostname.endswith(".safelinks.protection.outlook.com"):
+        href = urllib.parse.parse_qs(url.query).get("url", [href])[0]
+    return href.strip() or None
+
+
 class Cleaner(html.parser.HTMLParser):
     def __init__(self, layout):
         super().__init__(convert_charrefs=False)
@@ -23,27 +33,40 @@ class Cleaner(html.parser.HTMLParser):
         self.out = []
         self.stack = []
         self.hidden = 0
+        # out index of the open link's start tag, and whether it holds visible text
+        self.link = None
+        self.linked = False
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         hide = tag in SKIP or attrs.get("aria-hidden") == "true" or "hidden" in attrs or HIDDEN.search(attrs.get("style") or "")
+        # layout blocks inside a link split it from its label in w3m, so drop them there
+        emit = not self.hidden and not hide and tag != "img" and not (tag in self.layout and self.link is not None)
         if tag not in VOID:
-            self.stack.append((tag, hide))
+            self.stack.append((tag, hide, emit))
             self.hidden += bool(hide)
-        if self.hidden or tag == "img":
+        if not emit:
             return
         if tag in self.layout:
             tag = LAYOUT[tag]
-        keep = {key: value for key, value in attrs.items() if key in ("href", "colspan", "rowspan")}
+        keep = {key: value for key, value in attrs.items() if key in ("colspan", "rowspan")}
+        if tag == "a" and target(attrs):
+            keep["href"] = target(attrs)
+            self.link, self.linked = len(self.out), False
         self.out.append(f"<{tag}" + "".join(f' {key}="{html.escape(value or "")}"' for key, value in keep.items()) + ">")
 
     def handle_endtag(self, tag):
-        if tag in VOID or not any(open_tag == tag for open_tag, _ in self.stack):
+        if tag in VOID or not any(open_tag == tag for open_tag, _, _ in self.stack):
             return
         while self.stack:
-            open_tag, hide = self.stack.pop()
-            if not self.hidden:
+            open_tag, hide, emit = self.stack.pop()
+            if emit:
                 self.out.append(f"</{LAYOUT.get(open_tag, open_tag) if open_tag in self.layout else open_tag}>")
+            if open_tag == "a" and emit and self.link is not None:
+                # a link without visible text (an image) only adds a bare number
+                if not self.linked:
+                    self.out[self.link] = "<a>"
+                self.link = None
             self.hidden -= bool(hide)
             if open_tag == tag:
                 break
@@ -51,6 +74,7 @@ class Cleaner(html.parser.HTMLParser):
     def handle_data(self, data):
         if not self.hidden:
             self.out.append(data)
+            self.linked = self.linked or (self.link is not None and bool(INVISIBLE.sub("", SPACE.sub("", data)).strip()))
 
     def handle_entityref(self, name):
         self.handle_data(f"&{name};")
