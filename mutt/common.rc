@@ -59,7 +59,7 @@ message-hook '~f jbosch@ultratronik.de ~s "^What.s new in Software U"' 'set mail
 
 # urlscan
 set wait_key = no
-macro index,pager \cb "<enter-command>set pipe_decode<enter><pipe-message>urlscan -d -W<enter><enter-command>unset pipe_decode<enter>" "call urlscan to extract URLs out of a message"
+macro index,pager \cb "<enter-command>set pipe_decode; setenv MUTT_FULL_LINKS 1<enter><pipe-message>urlscan -d -W<enter><enter-command>unset pipe_decode; unsetenv MUTT_FULL_LINKS<enter>" "call urlscan to extract URLs out of a message"
 macro attach,compose \cb "<pipe-entry>urlscan -d -W<enter>" "call urlscan to extract URLs out of a message"
 
 # notifications

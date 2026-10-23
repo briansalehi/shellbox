@@ -4,6 +4,7 @@
 # and drops the invisible padding characters left behind.
 
 import html.parser
+import os
 import re
 import subprocess
 import sys
@@ -96,4 +97,9 @@ text = subprocess.run(w3m, input="".join(cleaner.out), capture_output=True, text
 text = SPACE.sub(" ", INVISIBLE.sub("", text))
 text = re.sub(r"\[\d+\] *(?=\[\d+\]|$)", "", text, flags=re.M)
 text = re.sub(r"[ \t]+$", "", text, flags=re.M)
+# tracking urls fill the screen, so references show only the host, except for urlscan (\cb sets MUTT_FULL_LINKS)
+if not os.environ.get("MUTT_FULL_LINKS"):
+    body, mark, references = text.partition("\nReferences:\n")
+    references = re.sub(r"^(\[\d+\]) (\S+)$", lambda match: f"{match[1]} {urllib.parse.urlsplit(match[2]).hostname or match[2]}", references, flags=re.M)
+    text = body + mark + references
 print(re.sub(r"\n{3,}", "\n\n", text).strip("\n"))
