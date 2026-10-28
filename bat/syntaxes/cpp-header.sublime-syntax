@@ -1,0 +1,8 @@
+%YAML 1.2
+---
+name: C++ Header
+file_extensions: [h]
+scope: source.c++.header
+contexts:
+  main:
+    - include: scope:source.c++

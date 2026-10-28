@@ -8,6 +8,7 @@
     plus-style = syntax
     minus-style = syntax
     navigate = true
+	syntax-theme = Monokai Extended Light
 [alias]
 	report = log --oneline --graph --decorate --all -n 20
 	pullhead = !sh -c \"git pull $(git remote) $(git rev-parse --abbrev-ref HEAD)\"
@@ -33,3 +34,5 @@
     smtpserver = /usr/bin/msmtp
     confirm = always
     annotate = yes
+[diff]
+	external = difft

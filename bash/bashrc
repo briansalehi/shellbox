@@ -75,7 +75,12 @@ export GPG_TTY=$(tty)
 export EDITOR=$(type -p nvim)
 # Less colors for man pages
 export PAGER='/usr/bin/less'
-export GLAB_PAGER='delta'
+export GIT_EXTERNAL_DIFF='difft'
+export GLAB_PAGER="gdiff"
+export DFT_OVERRIDE='*.h:C++'
+export DFT_DISPLAY='side-by-side'
+export DFT_SYNTAX_HIGHLIGHT='on'
+export DFT_PARSE_ERROR_LIMIT=10
 # Begin blinking
 export LESS_TERMCAP_mb=$(tput bold; tput setaf 1)
 # Begin bold

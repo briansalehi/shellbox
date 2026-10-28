@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# Pager for patches on stdin (e.g. GLAB_PAGER) that shows them with difftastic.
+# Both sides are rebuilt from the blob ids in the patch, so it must run inside the repository.
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+sed 's/\x1b\[[0-9;]*m//g' > "$tmp/patch"
+export GIT_INDEX_FILE="$tmp/index"
+
+if git apply --build-fake-ancestor="$tmp/index" "$tmp/patch" 2>/dev/null
+then
+    before="$(git write-tree)"
+    git apply --cached "$tmp/patch"
+    after="$(git write-tree)"
+    git -c diff.external=difft -c core.pager='less -RF' diff "$before" "$after"
+else
+    delta < "$tmp/patch"
+fi
