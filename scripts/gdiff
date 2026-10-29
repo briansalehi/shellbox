@@ -2,6 +2,8 @@
 
 # Pager for patches on stdin (e.g. GLAB_PAGER) that shows them with difftastic.
 # Both sides are rebuilt from the blob ids in the patch, so it must run inside the repository.
+# Patches without blob ids (glab mr diff) are applied to the first of HEAD, upstream or the
+# remote main branches that they fit.
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -9,10 +11,27 @@ trap 'rm -rf "$tmp"' EXIT
 sed 's/\x1b\[[0-9;]*m//g' > "$tmp/patch"
 export GIT_INDEX_FILE="$tmp/index"
 
+strip=-p1
+grep -q '^+++ b/' "$tmp/patch" || strip=-p0
+
+before=""
 if git apply --build-fake-ancestor="$tmp/index" "$tmp/patch" 2>/dev/null
 then
     before="$(git write-tree)"
-    git apply --cached "$tmp/patch"
+else
+    for base in HEAD '@{upstream}' origin/main origin/master origin/develop
+    do
+        if git read-tree "$base" 2>/dev/null && git apply --cached --check "$strip" "$tmp/patch" 2>/dev/null
+        then
+            before="$(git write-tree)"
+            break
+        fi
+    done
+fi
+
+if [ -n "$before" ]
+then
+    git apply --cached "$strip" "$tmp/patch"
     after="$(git write-tree)"
     git -c diff.external=difft -c core.pager='less -RF' diff "$before" "$after"
 else
