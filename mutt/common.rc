@@ -36,6 +36,7 @@ bind index P purge-message
 bind index,pager \ci sidebar-prev
 bind index,pager \cu sidebar-next
 bind index,pager \co sidebar-open
+bind index,pager \en search-opposite
 
 # cache
 set header_cache_backend = lmdb
