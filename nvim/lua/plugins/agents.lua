@@ -152,14 +152,6 @@ agents.setup({
             name = 'claude',
             cmd = 'claude',
             args = { '--chrome' },
-            variants = {
-                continue        = { '--continue' },
-                resume          = { '--resume' },
-                verbose         = { '--verbose' },
-                verboseContinue = { '--verbose', '--continue' },
-                yolo            = { '--dangerously-skip-permissions' },
-                yoloContinue    = { '--dangerously-skip-permissions', '--continue' },
-            },
             models = claude_models,
         },
         -- its own agent, not a claude variant, so a review session and a working
@@ -170,9 +162,6 @@ agents.setup({
             -- Write puts bytes on disk exactly like Edit, and a subagent has its
             -- own tool set, so Agent is an edit delegated one level down
             args = { '--chrome', '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Agent' },
-            variants = {
-                continue = { '--continue' },
-            },
             models = claude_review_models,
         },
         {
@@ -188,50 +177,112 @@ agents.setup({
                 ['<C-u>'] = '\27[5~',   -- PageUp
                 ['<C-d>'] = '\27[6~',   -- PageDown
             },
-            variants = {
-                continue = { '--continue' },
-                fork     = { '--continue', '--fork' },
-            },
             models = opencode_models,
         },
         {
             name = 'cursor',
             cmd = 'cursor-agent',
-            variants = {
-                continue = { '--continue' },
-                resume   = { '--resume' },
-            },
             models = cursor_models,
         },
     },
 })
 
-local function toggle(name, variant)
-    return function() agents.toggle(name, { variant = variant }) end
+-- Family-first keys: <leader>c<family><action>. Sticky modifier toggles
+-- (continue / verbose / yolo) are per family and only bound where the CLI
+-- supports them; they compose into the next bare or picker launch. Observe is
+-- also per family; the write-hook wiring comes later, the toggle only tracks state.
+local families = {
+    claude = {
+        mods = {
+            continue = { '--continue' },
+            verbose  = { '--verbose' },
+            yolo     = { '--dangerously-skip-permissions' },
+        },
+        state = { continue = false, verbose = false, yolo = false, observe = false },
+    },
+    opencode = {
+        mods = {
+            continue = { '--continue' },
+        },
+        state = { continue = false, observe = false },
+    },
+    cursor = {
+        mods = {
+            continue = { '--continue' },
+            yolo     = { '--yolo' },
+        },
+        state = { continue = false, yolo = false, observe = false },
+    },
+}
+
+local mod_order = { 'continue', 'verbose', 'yolo' }
+
+local function mod_args(family, skip)
+    local f = families[family]
+    local args = {}
+    for _, name in ipairs(mod_order) do
+        if f.mods[name] and f.state[name] and not (skip and skip[name]) then
+            vim.list_extend(args, f.mods[name])
+        end
+    end
+    return args
 end
 
-local function pick_model(name, variant)
-    return function() agents.pick_model(name, { variant = variant }) end
+local function toggle_mod(family, name)
+    return function()
+        local f = families[family]
+        f.state[name] = not f.state[name]
+        vim.notify(('agents: %s %s %s'):format(family, name, f.state[name] and 'on' or 'off'),
+            vim.log.levels.INFO)
+    end
 end
 
-map('<leader>cc', pick_model('claude'),                'Agent: claude model')
-map('<leader>cC', pick_model('claude', 'continue'),    'Agent: claude model (continue)')
-map('<leader>cr', toggle('claude'),                    'Agent: claude (raw)')
-map('<leader>cR', toggle('claude', 'continue'),        'Agent: claude (raw, continue)')
-map('<leader>cv', toggle('claude', 'verbose'),         'Agent: claude (verbose)')
-map('<leader>cV', toggle('claude', 'verboseContinue'), 'Agent: claude (verbose, continue)')
-map('<leader>cy', toggle('claude', 'yolo'),            'Agent: claude (skip permissions)')
-map('<leader>cY', toggle('claude', 'yoloContinue'),    'Agent: claude (skip permissions, continue)')
-map('<leader>cd', pick_model('review'),                'Agent: claude review model (no edits)')
-map('<leader>cD', pick_model('review', 'continue'),    'Agent: claude review model (no edits, continue)')
-map('<leader>ca', pick_model('opencode'),              'Agent: opencode model')
-map('<leader>co', toggle('opencode'),                  'Agent: opencode')
-map('<leader>cO', toggle('opencode', 'continue'),      'Agent: opencode (continue)')
-map('<leader>cs', pick_model('cursor'),                'Agent: cursor model')
-map('<leader>cS', pick_model('cursor', 'continue'),    'Agent: cursor model (continue)')
-map('<leader>cu', toggle('cursor'),                    'Agent: cursor')
-map('<leader>cU', toggle('cursor', 'continue'),        'Agent: cursor (continue)')
-map('<leader>cp', agents.pick,                         'Agent: pick or focus')
+local function toggle_observe(family)
+    return function()
+        local f = families[family]
+        f.state.observe = not f.state.observe
+        vim.notify(('agents: %s observe %s'):format(family, f.state.observe and 'on' or 'off'),
+            vim.log.levels.INFO)
+    end
+end
+
+local function launch(family, agent_name, skip)
+    return function()
+        agents.toggle(agent_name, { args = mod_args(family, skip) })
+    end
+end
+
+local function launch_picker(family, agent_name, skip)
+    return function()
+        agents.pick_model(agent_name, { args = mod_args(family, skip) })
+    end
+end
+
+-- claude: bare / picker / review / observe + continue, verbose, yolo
+-- review reads the claude family's toggles but never takes yolo
+map('<leader>ccc', launch('claude', 'claude'),              'Agent: claude')
+map('<leader>ccp', launch_picker('claude', 'claude'),       'Agent: claude model')
+map('<leader>ccd', launch_picker('claude', 'review', { yolo = true }),
+    'Agent: claude review (no edits)')
+map('<leader>cce', toggle_observe('claude'),                'Agent: claude observe')
+map('<leader>ccn', toggle_mod('claude', 'continue'),        'Agent: claude continue')
+map('<leader>ccv', toggle_mod('claude', 'verbose'),         'Agent: claude verbose')
+map('<leader>ccy', toggle_mod('claude', 'yolo'),            'Agent: claude yolo')
+
+-- opencode: bare / picker / observe + continue (no verbose, no yolo)
+map('<leader>coo', launch('opencode', 'opencode'),          'Agent: opencode')
+map('<leader>cop', launch_picker('opencode', 'opencode'),   'Agent: opencode model')
+map('<leader>coe', toggle_observe('opencode'),              'Agent: opencode observe')
+map('<leader>con', toggle_mod('opencode', 'continue'),      'Agent: opencode continue')
+
+-- cursor: bare / picker / observe + continue, yolo (no verbose)
+map('<leader>cuu', launch('cursor', 'cursor'),              'Agent: cursor')
+map('<leader>cup', launch_picker('cursor', 'cursor'),       'Agent: cursor model')
+map('<leader>cue', toggle_observe('cursor'),                'Agent: cursor observe')
+map('<leader>cun', toggle_mod('cursor', 'continue'),        'Agent: cursor continue')
+map('<leader>cuy', toggle_mod('cursor', 'yolo'),            'Agent: cursor yolo')
+
+map('<leader>cp', agents.pick,                              'Agent: pick or focus')
 
 -- <C-l> is not free: <C-h/j/k/l> leave the terminal window, so redraw lives on <M-r>
 vim.keymap.set({ 'n', 't' }, '<M-r>', function()

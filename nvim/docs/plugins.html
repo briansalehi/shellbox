@@ -301,6 +301,9 @@
       <div class="grp"><b>\l</b><span>lsp</span></div>
       <div class="grp"><b>\u</b><span>format</span></div>
       <div class="grp"><b>\c</b><span>agents</span></div>
+      <div class="grp"><b>\cc</b><span>claude</span></div>
+      <div class="grp"><b>\co</b><span>opencode</span></div>
+      <div class="grp"><b>\cu</b><span>cursor</span></div>
       <div class="grp"><b>\r</b><span>refactor</span></div>
       <div class="grp"><b>\x</b><span>trouble</span></div>
       <div class="grp"><b>\q</b><span>quickfix</span></div>
@@ -732,20 +735,25 @@
 
     <div class="plug">
       <div class="plug-head"><span class="plug-name">lua/agents.lua</span><span class="plug-tag">not a plugin</span></div>
-      <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a 50% bottom split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>; adding one is a new entry plus a <code>map(...)</code> line.</p>
-      <p class="why">The reviewer behind <code>\cd</code> is a separate agent rather than a claude variant, precisely because sessions are keyed that way: as a variant it would reuse the claude already running in the repository and its flags would be dropped, so the keymap would silently hand back an agent that can still edit. It runs <code>claude</code> with <code>--disallowedTools Edit Write NotebookEdit Agent</code>, which removes the editing tools from the process and keeps it from delegating an edit to a subagent, plus a prompt closing the Bash routes to a write. The prompt asks for proposals as fenced <code>diff</code> blocks with <code>---</code>/<code>+++</code> headers and <code>@@</code> hunk lines, so each one says where it lands. Because claude refuses <code>--append-system-prompt</code> alongside <code>--append-system-prompt-file</code>, its picker inlines the chosen model&rsquo;s prompt file and appends the review rules to that text instead of passing the path.</p>
-      <p class="why">The claude model picker (<code>\cc</code>) launches with <code>--remote-control</code>, so those sessions can be followed from another device. Opencode runs on the terminal&rsquo;s alternate screen and leaves no scrollback in the buffer, so in its normal mode <code>C-u</code> / <code>C-d</code> send PageUp / PageDown to opencode itself. Its export (<code>ctrl+x x</code>) and prompt editor (<code>ctrl+x e</code>) run <code>$VISUAL</code>, set to <code>scripts/remote-edit.lua</code>, which opens the file in a new tab of this nvim and returns to opencode once that buffer is closed.</p>
+      <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a right split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>. Keys are family-first: <code>\c</code> &rarr; family (<code>c</code> / <code>o</code> / <code>u</code>) &rarr; action; <code>\cc</code> / <code>\co</code> / <code>\cu</code> are which-key groups only. Sticky continue / verbose / yolo toggles are per family and only bound where that CLI supports them; they compose into the next bare or picker launch.</p>
+      <p class="why">The reviewer behind <code>\ccd</code> is a separate agent rather than a claude variant, precisely because sessions are keyed that way: as a variant it would reuse the claude already running in the repository and its flags would be dropped, so the keymap would silently hand back an agent that can still edit. It runs <code>claude</code> with <code>--disallowedTools Edit Write NotebookEdit Agent</code>, which removes the editing tools from the process and keeps it from delegating an edit to a subagent, plus a prompt closing the Bash routes to a write. It reuses the claude family&rsquo;s continue/verbose toggles but never takes yolo. The prompt asks for proposals as fenced <code>diff</code> blocks with <code>---</code>/<code>+++</code> headers and <code>@@</code> hunk lines, so each one says where it lands. Because claude refuses <code>--append-system-prompt</code> alongside <code>--append-system-prompt-file</code>, its picker inlines the chosen model&rsquo;s prompt file and appends the review rules to that text instead of passing the path.</p>
+      <p class="why">The claude model picker (<code>\ccp</code>) launches with <code>--remote-control</code>, so those sessions can be followed from another device. Opencode runs on the terminal&rsquo;s alternate screen and leaves no scrollback in the buffer, so in its normal mode <code>C-u</code> / <code>C-d</code> send PageUp / PageDown to opencode itself. Its export (<code>ctrl+x x</code>) and prompt editor (<code>ctrl+x e</code>) run <code>$VISUAL</code>, set to <code>scripts/remote-edit.lua</code>, which opens the file in a new tab of this nvim and returns to opencode once that buffer is closed. Observe toggles (<code>\cce</code> / <code>\coe</code> / <code>\cue</code>) track per-family state; the BufWritePost advise hook is not wired yet.</p>
       <dl class="keys">
-        <dt>\cc &middot; \cC</dt><dd>claude model picker, plain / continue</dd>
-        <dt>\cr &middot; \cR</dt><dd>claude raw, plain / continue</dd>
-        <dt>\cv &middot; \cV</dt><dd>claude verbose, plain / continue</dd>
-        <dt>\cy &middot; \cY</dt><dd>claude skipping permissions, plain / continue</dd>
-        <dt>\cd &middot; \cD</dt><dd>claude reviewer, no editing tools, plain / continue</dd>
-        <dt>\ca</dt><dd>opencode model picker</dd>
-        <dt>\co &middot; \cO</dt><dd>opencode, plain / continue</dd>
-        <dt>\cs &middot; \cS</dt><dd>cursor model picker, plain / continue</dd>
-        <dt>\cu &middot; \cU</dt><dd>cursor, plain / continue</dd>
+        <dt>\ccc</dt><dd>claude bare</dd>
+        <dt>\ccp</dt><dd>claude model picker</dd>
+        <dt>\ccd</dt><dd>claude reviewer, no editing tools</dd>
+        <dt>\cce</dt><dd>claude observe toggle</dd>
+        <dt>\ccn &middot; \ccv &middot; \ccy</dt><dd>claude continue / verbose / yolo toggles</dd>
+        <dt>\coo</dt><dd>opencode bare</dd>
+        <dt>\cop</dt><dd>opencode model picker</dd>
+        <dt>\coe</dt><dd>opencode observe toggle</dd>
+        <dt>\con</dt><dd>opencode continue toggle</dd>
+        <dt>\cuu</dt><dd>cursor bare</dd>
+        <dt>\cup</dt><dd>cursor model picker</dd>
+        <dt>\cue</dt><dd>cursor observe toggle</dd>
+        <dt>\cun &middot; \cuy</dt><dd>cursor continue / yolo toggles</dd>
         <dt>\cp</dt><dd>Pick or focus a running agent</dd>
+        <dt>\ch</dt><dd>Hide (from an agent terminal)</dd>
       </dl>
     </div>
   </section>

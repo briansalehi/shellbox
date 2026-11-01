@@ -176,7 +176,7 @@ local function setup_buffer_keymaps(s)
         vim.keymap.set('t', '<M-' .. d .. '>', [[<C-\><C-n>G<C-w>]] .. d,
             { buffer = s.buf, desc = 'Window: move ' .. d .. ', keep following output' })
     end
-    vim.keymap.set('t', '<leader>cc', function() M.hide(s.agent.name) end,
+    vim.keymap.set({ 'n', 't' }, '<leader>ch', function() M.hide(s.agent.name) end,
         { buffer = s.buf, desc = 'Agent: hide' })
     -- the built-in moves equalize the layout, so re-apply the configured size
     for key, vertical in pairs({ L = true, J = false }) do
@@ -419,9 +419,14 @@ function M.pick_model(name, opts)
     end
 
     -- argv list: paths and provider/model strings go through verbatim, escaping
-    -- them would pass literal quotes to the agent
+    -- them would pass literal quotes to the agent. opts.args (sticky family
+    -- flags) prepend the picker's own args so --continue/--verbose/--yolo apply
+    -- to a model launch the same way they do to a bare one.
     local function go(item)
-        M.focus(agent.name, { variant = opts.variant, args = item.args })
+        local args = {}
+        vim.list_extend(args, opts.args or {})
+        vim.list_extend(args, item.args or {})
+        M.focus(agent.name, { variant = opts.variant, args = args })
     end
 
     if #items == 1 then return go(items[1]) end

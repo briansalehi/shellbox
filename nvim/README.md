@@ -229,18 +229,28 @@ width (or a 50% bottom split with `orientation = 'horizontal'`), keyed by
 repository. `lua/plugins/agents.lua` holds the agent table and the keymaps; adding
 one is a new entry plus a `map(...)` line.
 
+Keys are family-first: `\c` → family (`c` claude, `o` opencode, `u` cursor) →
+action. `\cc` / `\co` / `\cu` are which-key groups only. Sticky modifier toggles
+(continue / verbose / yolo) are per family and only exist where that CLI supports
+them; they compose into the next bare or picker launch. Notify reports on/off.
+
 | Keymap | Action |
 | --- | --- |
-| `\cc` / `\cC` | claude model picker, plain / continue last session |
-| `\cr` / `\cR` | claude raw, no model and no appended prompt, plain / continue |
-| `\cv` / `\cV` | claude, verbose / verbose and continue |
-| `\cy` / `\cY` | claude, skip permissions / skip permissions and continue |
-| `\cd` / `\cD` | claude reviewer, no editing tools, model picker, plain / continue |
-| `\ca` | opencode model picker |
-| `\co` / `\cO` | opencode, plain / continue last session |
-| `\cs` / `\cS` | cursor model picker, plain / continue last chat |
-| `\cu` / `\cU` | cursor, plain / continue last chat |
+| `\ccc` | claude bare |
+| `\ccp` | claude model picker |
+| `\ccd` | claude reviewer (no edits; model picker) |
+| `\cce` | claude observe toggle |
+| `\ccn` / `\ccv` / `\ccy` | claude continue / verbose / yolo toggles |
+| `\coo` | opencode bare |
+| `\cop` | opencode model picker |
+| `\coe` | opencode observe toggle |
+| `\con` | opencode continue toggle |
+| `\cuu` | cursor bare |
+| `\cup` | cursor model picker |
+| `\cue` | cursor observe toggle |
+| `\cun` / `\cuy` | cursor continue / yolo toggles |
 | `\cp` | pick or focus a running agent |
+| `\ch` | hide (agent terminal buffer only) |
 | `<M-r>` | redraw the terminal (`<C-l>` is not free: `<C-h/j/k/l>` leave the window) |
 | `<M-h/j/k/l>` | leave the terminal like `<C-h/j/k/l>`, but the agent window keeps scrolling with new output |
 
@@ -248,13 +258,14 @@ Model pickers are per-agent, because each agent takes a system prompt through
 different flags and must never be offered each other's models. Claude lists
 `~/.config/models/claude/*.md` and launches
 `--remote-control --model <name> --append-system-prompt-file <path>`, so those
-sessions can be followed from another device. The reviewer under `\cd` is a
+sessions can be followed from another device. The reviewer under `\ccd` is a
 separate agent rather than a claude variant, so a review and a working session stay
 alive side by side in one repository. It adds
 `--disallowedTools Edit Write NotebookEdit Agent`, which also keeps it from
 delegating an edit to a subagent, and a prompt forbidding writes through Bash and
 installing, deploying, or publishing targets. Building and testing stay allowed.
-The prompt asks for proposals as fenced `diff` blocks with `---`/`+++` headers and
+It reuses the claude family's continue/verbose toggles but never takes yolo. The
+prompt asks for proposals as fenced `diff` blocks with `---`/`+++` headers and
 `@@` hunk lines, so each one says where it lands. Because claude refuses `--append-system-prompt` together with
 `--append-system-prompt-file`, it inlines the picked model's prompt file and
 appends the review rules to that text. Opencode lists what
@@ -266,7 +277,8 @@ frontmatter `model:` names that model, and such a model is shown as
 what `cursor-agent --list-models` reports (cached the same way, and it exits
 non-zero until `cursor-agent login` has run) and launches `--model <name>` with
 nothing else: cursor takes its instructions from `.cursor/rules` and `AGENTS.md`,
-so it has no prompt flag to pair with a model.
+so it has no prompt flag to pair with a model. Observe toggles track per-family
+state only for now; the BufWritePost advise hook is not wired yet.
 
 Opening or toggling an agent lands in insert mode, but nothing re-enters insert on
 `WinEnter`, so leaving with `<C-\><C-n>` and switching windows keeps the scrollback
