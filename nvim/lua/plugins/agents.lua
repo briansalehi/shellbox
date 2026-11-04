@@ -1,6 +1,7 @@
 -- Coding agents in a 15% right split (50% when horizontal). The engine is lua/agents.lua; this file is the agent table and the keymaps.
 
 local agents = require('agents')
+local observer = require('agent-observer')
 local map = require('plugins.util').fn_map
 
 -- Each ~/.config/models/claude/<model>.md holds the prompt to append when running
@@ -21,10 +22,18 @@ local function claude_models()
     for _, p in ipairs(claude_prompts()) do
         table.insert(out, {
             label = p.model,
-            args  = { '--remote-control', '--model', p.model, '--append-system-prompt-file', p.file },
+            args  = { '--model', p.model, '--append-system-prompt-file', p.file },
         })
     end
     return out
+end
+
+-- What <leader>acl launches. Without an opus.md, claude's own default model.
+local function claude_default_args()
+    for _, item in ipairs(claude_models()) do
+        if item.label == 'opus' then return item.args end
+    end
+    return {}
 end
 
 -- Reviewer mode. --disallowedTools covers Edit, Write, NotebookEdit and Agent;
@@ -151,7 +160,7 @@ agents.setup({
         {
             name = 'claude',
             cmd = 'claude',
-            args = { '--chrome' },
+            args = { '--chrome', '--remote-control' },
             models = claude_models,
         },
         -- its own agent, not a claude variant, so a review session and a working
@@ -161,7 +170,10 @@ agents.setup({
             cmd = 'claude',
             -- Write puts bytes on disk exactly like Edit, and a subagent has its
             -- own tool set, so Agent is an edit delegated one level down
-            args = { '--chrome', '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Agent' },
+            -- The hooks are how the observer knows it is safe to type into this session.
+            -- --disallowedTools takes every word after it, so it has to stay last.
+            args = { '--chrome', '--settings', observer.hook_settings(),
+                     '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Agent' },
             models = claude_review_models,
         },
         {
@@ -187,10 +199,11 @@ agents.setup({
     },
 })
 
--- Family-first keys: <leader>c<family><action>. Sticky modifier toggles
--- (continue / verbose / yolo) are per family and only bound where the CLI
--- supports them; they compose into the next bare or picker launch. Observe is
--- also per family; the write-hook wiring comes later, the toggle only tracks state.
+-- Family-first keys: <leader>a<family><action>, with the same action letters in
+-- every family: l launch, p picker, o observe, c continue. Modifier toggles (continue /
+-- verbose / yolo) are per family and only bound where the CLI supports them; they
+-- compose into the next launch. Continue and yolo switch off once a launch has used
+-- them, verbose stays on. Observe only works for claude so far, see lua/agent-observer.lua.
 local families = {
     claude = {
         mods = {
@@ -198,20 +211,20 @@ local families = {
             verbose  = { '--verbose' },
             yolo     = { '--dangerously-skip-permissions' },
         },
-        state = { continue = false, verbose = false, yolo = false, observe = false },
+        state = { continue = false, verbose = false, yolo = false },
     },
     opencode = {
         mods = {
             continue = { '--continue' },
         },
-        state = { continue = false, observe = false },
+        state = { continue = false },
     },
     cursor = {
         mods = {
             continue = { '--continue' },
             yolo     = { '--yolo' },
         },
-        state = { continue = false, yolo = false, observe = false },
+        state = { continue = false, yolo = false },
     },
 }
 
@@ -237,52 +250,104 @@ local function toggle_mod(family, name)
     end
 end
 
-local function toggle_observe(family)
+local function observe_unsupported(family)
     return function()
-        local f = families[family]
-        f.state.observe = not f.state.observe
-        vim.notify(('agents: %s observe %s'):format(family, f.state.observe and 'on' or 'off'),
-            vim.log.levels.INFO)
+        vim.notify(('agents: observe is not available for %s yet'):format(family),
+            vim.log.levels.WARN)
     end
 end
 
-local function launch(family, agent_name, skip)
-    return function()
-        agents.toggle(agent_name, { args = mod_args(family, skip) })
+-- review reads the claude family's toggles but never takes yolo. Its read-only
+-- prompt only comes from its model list, so it always starts through the picker.
+local launch_specs = {
+    claude   = { family = 'claude', base = claude_default_args },
+    review   = { family = 'claude', skip = { yolo = true }, picker = true },
+    opencode = { family = 'opencode' },
+    cursor   = { family = 'cursor' },
+}
+
+local one_shot = { 'continue', 'yolo' }
+
+-- A skipped toggle was not used, so it stays on for the next launch that takes it.
+local function consume_mods(spec)
+    local state = families[spec.family].state
+    for _, name in ipairs(one_shot) do
+        if state[name] and not (spec.skip and spec.skip[name]) then state[name] = false end
     end
 end
 
-local function launch_picker(family, agent_name, skip)
-    return function()
-        agents.pick_model(agent_name, { args = mod_args(family, skip) })
+local function launch_opts(agent_name, base)
+    local spec = launch_specs[agent_name]
+    local args = mod_args(spec.family, spec.skip)
+    local pending = #args > 0
+    vim.list_extend(args, base or {})
+    return {
+        args = args,
+        warn_ignored = pending,
+        on_spawn = function() consume_mods(spec) end,
+    }
+end
+
+local function direct_opts(agent_name)
+    local base = launch_specs[agent_name].base
+    return launch_opts(agent_name, base and base())
+end
+
+local function launch(agent_name)
+    return function() agents.toggle(agent_name, direct_opts(agent_name)) end
+end
+
+local function launch_picker(agent_name)
+    return function() agents.pick_model(agent_name, launch_opts(agent_name)) end
+end
+
+-- Observing starts the reviewer if needed, without taking you out of your buffer.
+local function toggle_observe()
+    observer.toggle(function()
+        local win = vim.api.nvim_get_current_win()
+        local opts = launch_opts('review')
+        local consume = opts.on_spawn
+        opts.on_spawn = function()
+            consume()
+            vim.api.nvim_set_current_win(win)
+        end
+        agents.pick_model('review', opts)
+    end)
+end
+
+-- what <leader>ap runs for an agent that is not running yet
+local function start_from_pick(agent_name)
+    if launch_specs[agent_name].picker then
+        agents.pick_model(agent_name, launch_opts(agent_name))
+    else
+        agents.focus(agent_name, direct_opts(agent_name))
     end
 end
 
--- claude: bare / picker / review / observe + continue, verbose, yolo
--- review reads the claude family's toggles but never takes yolo
-map('<leader>ccc', launch('claude', 'claude'),              'Agent: claude')
-map('<leader>ccp', launch_picker('claude', 'claude'),       'Agent: claude model')
-map('<leader>ccd', launch_picker('claude', 'review', { yolo = true }),
-    'Agent: claude review (no edits)')
-map('<leader>cce', toggle_observe('claude'),                'Agent: claude observe')
-map('<leader>ccn', toggle_mod('claude', 'continue'),        'Agent: claude continue')
-map('<leader>ccv', toggle_mod('claude', 'verbose'),         'Agent: claude verbose')
-map('<leader>ccy', toggle_mod('claude', 'yolo'),            'Agent: claude yolo')
+-- claude: opus / picker / review / observe + continue, verbose, yolo
+map('<leader>acl', launch('claude'),                        'Agent: claude')
+map('<leader>acp', launch_picker('claude'),                 'Agent: claude model')
+map('<leader>acd', launch_picker('review'),                 'Agent: claude review (no edits)')
+map('<leader>aco', toggle_observe,                          'Agent: claude observe (pair on save)')
+map('<leader>acc', toggle_mod('claude', 'continue'),        'Agent: claude continue')
+map('<leader>acv', toggle_mod('claude', 'verbose'),         'Agent: claude verbose')
+map('<leader>acy', toggle_mod('claude', 'yolo'),            'Agent: claude yolo')
 
 -- opencode: bare / picker / observe + continue (no verbose, no yolo)
-map('<leader>coo', launch('opencode', 'opencode'),          'Agent: opencode')
-map('<leader>cop', launch_picker('opencode', 'opencode'),   'Agent: opencode model')
-map('<leader>coe', toggle_observe('opencode'),              'Agent: opencode observe')
-map('<leader>con', toggle_mod('opencode', 'continue'),      'Agent: opencode continue')
+map('<leader>aol', launch('opencode'),                      'Agent: opencode')
+map('<leader>aop', launch_picker('opencode'),               'Agent: opencode model')
+map('<leader>aoo', observe_unsupported('opencode'),         'Agent: opencode observe')
+map('<leader>aoc', toggle_mod('opencode', 'continue'),      'Agent: opencode continue')
 
 -- cursor: bare / picker / observe + continue, yolo (no verbose)
-map('<leader>cuu', launch('cursor', 'cursor'),              'Agent: cursor')
-map('<leader>cup', launch_picker('cursor', 'cursor'),       'Agent: cursor model')
-map('<leader>cue', toggle_observe('cursor'),                'Agent: cursor observe')
-map('<leader>cun', toggle_mod('cursor', 'continue'),        'Agent: cursor continue')
-map('<leader>cuy', toggle_mod('cursor', 'yolo'),            'Agent: cursor yolo')
+map('<leader>aul', launch('cursor'),                        'Agent: cursor')
+map('<leader>aup', launch_picker('cursor'),                 'Agent: cursor model')
+map('<leader>auo', observe_unsupported('cursor'),           'Agent: cursor observe')
+map('<leader>auc', toggle_mod('cursor', 'continue'),        'Agent: cursor continue')
+map('<leader>auy', toggle_mod('cursor', 'yolo'),            'Agent: cursor yolo')
 
-map('<leader>cp', agents.pick,                              'Agent: pick or focus')
+map('<leader>ap', function() agents.pick({ launch = start_from_pick }) end,
+    'Agent: pick or focus')
 
 -- <C-l> is not free: <C-h/j/k/l> leave the terminal window, so redraw lives on <M-r>
 vim.keymap.set({ 'n', 't' }, '<M-r>', function()

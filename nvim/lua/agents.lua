@@ -176,7 +176,7 @@ local function setup_buffer_keymaps(s)
         vim.keymap.set('t', '<M-' .. d .. '>', [[<C-\><C-n>G<C-w>]] .. d,
             { buffer = s.buf, desc = 'Window: move ' .. d .. ', keep following output' })
     end
-    vim.keymap.set({ 'n', 't' }, '<leader>ch', function() M.hide(s.agent.name) end,
+    vim.keymap.set({ 'n', 't' }, '<leader>ah', function() M.hide(s.agent.name) end,
         { buffer = s.buf, desc = 'Agent: hide' })
     -- the built-in moves equalize the layout, so re-apply the configured size
     for key, vertical in pairs({ L = true, J = false }) do
@@ -216,7 +216,9 @@ local function spawn(agent, root, extra)
     local job = vim.fn.jobstart(argv, {
         term    = true,
         cwd     = vim.fn.isdirectory(root) == 1 and root or nil,
-        env     = agent.env,
+        -- how a hook script running inside the agent names this session
+        env     = vim.tbl_extend('force', agent.env or {},
+            { AGENT_NAME = agent.name, AGENT_ROOT = root }),
         on_exit = function(id, code) M._on_exit(id, code) end,
     })
 
@@ -302,7 +304,9 @@ local function launch(agent, opts)
     end
 
     sessions[key] = nil
-    return spawn(agent, root, resolve_args(agent, opts))
+    local spawned = spawn(agent, root, resolve_args(agent, opts))
+    if spawned and opts.on_spawn then opts.on_spawn() end
+    return spawned
 end
 
 local function agent_or_warn(name)
@@ -314,6 +318,14 @@ local function agent_or_warn(name)
 end
 
 --- public api ---------------------------------------------------------------
+
+M.project_root = project_root
+
+-- The live session of an agent in a root, or nil.
+function M.session(name, root)
+    local s = sessions[key_of(name, root)]
+    return alive(s) and s or nil
+end
 
 function M.list()
     local out = {}
@@ -337,6 +349,10 @@ function M.toggle(name, opts)
     if not agent then return end
     local s = sessions[key_of(agent.name, project_root())]
     if alive(s) and visible_win(s) then
+        if opts and opts.warn_ignored then
+            vim.notify(('agents: %s already running in %s (flags ignored)')
+                :format(agent.name, vim.fn.fnamemodify(s.root, ':t')), vim.log.levels.INFO)
+        end
         return hide_session(s)
     end
     return launch(agent, opts)
@@ -357,7 +373,8 @@ function M.stop(name)
     pcall(vim.fn.jobstop, s.job)
 end
 
-function M.pick()
+function M.pick(opts)
+    opts = opts or {}
     local root = project_root()
     local here, elsewhere, launchable = {}, {}, {}
 
@@ -377,7 +394,7 @@ function M.pick()
         if not alive(sessions[key_of(name, root)]) then
             table.insert(launchable, {
                 label = label(name, root, '[launch]'),
-                run   = function() M.focus(name) end,
+                run   = function() (opts.launch or M.focus)(name) end,
             })
         end
     end
@@ -419,14 +436,14 @@ function M.pick_model(name, opts)
     end
 
     -- argv list: paths and provider/model strings go through verbatim, escaping
-    -- them would pass literal quotes to the agent. opts.args (sticky family
+    -- them would pass literal quotes to the agent. opts.args (family toggle
     -- flags) prepend the picker's own args so --continue/--verbose/--yolo apply
     -- to a model launch the same way they do to a bare one.
     local function go(item)
         local args = {}
         vim.list_extend(args, opts.args or {})
         vim.list_extend(args, item.args or {})
-        M.focus(agent.name, { variant = opts.variant, args = args })
+        M.focus(agent.name, { variant = opts.variant, args = args, on_spawn = opts.on_spawn })
     end
 
     if #items == 1 then return go(items[1]) end

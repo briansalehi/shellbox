@@ -64,11 +64,15 @@ up any new file in those directories automatically. A new `service` must ship a 
   the `## Plugins` section of `nvim/README.md` in the same change**: add/remove its row in the
   matching category table (core, appearance, navigation, editing, C/C++, git), keep the plugin
   count in that section's intro line correct, and note the plugin's leader keymaps or that it has
-  no config. Do the same when an existing plugin's keymaps change.
+  no config. Do the same when an existing plugin's keymaps change. **`nvim/docs/plugins.html` is
+  the full key reference: whenever any keymap is added, changed or removed, plugin or not, update
+  it in the same change** so that every key the config binds is listed there.
   One feature is deliberately **not** a plugin: `lua/agents.lua` runs coding agents (claude,
   opencode, …) as `jobstart(argv, { term = true })` terminals keyed by (agent, git root), so
   several run in parallel in one repo. Its agent table and keymaps live in
   `lua/plugins/agents.lua`, and it is documented under `## Agents` in `nvim/README.md`.
+  `lua/agent-observer.lua` sends each save's diff to the claude reviewer session, using hooks
+  that report claude's state through `scripts/agent-state.lua`.
 - **`skills/`** — Claude Code skills, one directory per skill, each holding a `SKILL.md` (with
   YAML frontmatter carrying `name` and `description`) plus whatever `scripts/` it needs. A new
   skill needs **no Makefile edit** — the wildcard picks up any new subdirectory. `SKILL.md` is a

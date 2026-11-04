@@ -300,10 +300,10 @@
       <div class="grp"><b>\d</b><span>debug</span></div>
       <div class="grp"><b>\l</b><span>lsp</span></div>
       <div class="grp"><b>\u</b><span>format</span></div>
-      <div class="grp"><b>\c</b><span>agents</span></div>
-      <div class="grp"><b>\cc</b><span>claude</span></div>
-      <div class="grp"><b>\co</b><span>opencode</span></div>
-      <div class="grp"><b>\cu</b><span>cursor</span></div>
+      <div class="grp"><b>\a</b><span>agents</span></div>
+      <div class="grp"><b>\ac</b><span>claude</span></div>
+      <div class="grp"><b>\ao</b><span>opencode</span></div>
+      <div class="grp"><b>\au</b><span>cursor</span></div>
       <div class="grp"><b>\r</b><span>refactor</span></div>
       <div class="grp"><b>\x</b><span>trouble</span></div>
       <div class="grp"><b>\q</b><span>quickfix</span></div>
@@ -339,6 +339,8 @@
         <dt>\ms &middot; \mS</dt><dd>Stop runner / executor</dd>
         <dt>\mo &middot; \mO</dt><dd>Open runner / executor panel</dd>
         <dt>\mx &middot; \mX</dt><dd>Close runner / executor panel</dd>
+        <dt>\mi</dt><dd>Install</dd>
+        <dt>\mI</dt><dd>Install to a prefix you enter</dd>
         <dt>\mpc &middot; \mpb &middot; \mpt</dt><dd>Select configure / build / test preset</dd>
       </dl>
       <p class="caveat">Cache options are not cmake-tools' job: <code>\mv</code> lists <code>cmake -LH</code>, stages edits into the generate options <code>\mc</code> shows, and reconfigures once.</p>
@@ -355,6 +357,16 @@
         <dt>\mtu</dt><dd>Repeat until fail</dd>
         <dt>\mtf</dt><dd>Rerun failed tests</dd>
         <dt>\mtl</dt><dd>List tests</dd>
+      </dl>
+    </div>
+
+    <div class="plug">
+      <div class="plug-head"><span class="plug-name">ESP-IDF</span><span class="plug-tag">plugins/esp-idf.lua &middot; not a plugin</span></div>
+      <p class="why">Activates the ESP-IDF toolchain inside this nvim, so cmake-tools and clangd find it, and runs the serial monitor in a terminal at the project root, because the quickfix panel has no TTY for it. <code>:IdfActivate [target]</code> loads the environment and optionally sets the target; <code>:IdfSetPort [port]</code> sets or shows the serial port.</p>
+      <dl class="keys">
+        <dt>\mM</dt><dd>Open the serial monitor</dd>
+        <dt>\ms</dt><dd>Stop the monitor, from inside its terminal</dd>
+        <dt>C-h &middot; C-j &middot; C-k &middot; C-l</dt><dd>Leave the monitor terminal for another window</dd>
       </dl>
     </div>
 
@@ -483,8 +495,10 @@
         <dt>\fg</dt><dd>Live grep</dd>
         <dt>\fi</dt><dd>Git files</dd>
         <dt>\fb</dt><dd>Buffers</dd>
+        <dt>C-d</dt><dd>Close the selected buffer, inside the <code>\fb</code> picker</dd>
+        <dt>\fx</dt><dd>Close all other buffers, keeping unsaved ones</dd>
         <dt>\fh</dt><dd>Help tags</dd>
-        <dt>\fk</dt><dd>Keymaps</dd>
+        <dt>\fk</dt><dd>Search every live keymap</dd>
       </dl>
     </div>
 
@@ -492,10 +506,13 @@
       <div class="plug-head"><span class="plug-name">harpoon</span><span class="plug-tag">v2 &middot; plugins/navigation.lua</span></div>
       <p class="why">Pin the handful of files in flight and jump to them by number. Faster than a picker when you already know the file.</p>
       <dl class="keys">
-        <dt>\a</dt><dd>Add current file</dd>
-        <dt>\h</dt><dd>Quick menu</dd>
+        <dt>\ha</dt><dd>Add current file</dd>
+        <dt>\hh</dt><dd>Open the pin list</dd>
         <dt>\1 &ndash; \4</dt><dd>Jump to pinned file</dd>
+        <dt>CR</dt><dd>Open the file under the cursor, inside the pin list</dd>
+        <dt>q &middot; Esc</dt><dd>Close the pin list, discarding edits</dd>
       </dl>
+      <p class="caveat">The pin list is an editable buffer: <code>dd</code> unpins a line, moving lines reorders them, and <code>:w</code> saves and closes. Closing with <code>q</code> or <code>Esc</code> throws the edits away. Pins renumber after a removal, and only the first four have a jump key.</p>
     </div>
 
     <div class="plug">
@@ -590,12 +607,23 @@
         <dt>ys</dt><dd>Add a surround</dd>
         <dt>cs</dt><dd>Change a surround</dd>
         <dt>ds</dt><dd>Delete a surround</dd>
+        <dt>yss</dt><dd>Surround the current line</dd>
+        <dt>yS &middot; ySS</dt><dd>Surround a motion / the current line, on new lines</dd>
+        <dt>cS</dt><dd>Change a surround, putting the new pair on new lines</dd>
+        <dt>S &middot; gS</dt><dd>Surround a visual selection / on new lines</dd>
+        <dt>C-g s &middot; C-g S</dt><dd>Surround at the cursor in insert mode / on new lines</dd>
       </dl>
     </div>
 
     <div class="plug">
       <div class="plug-head"><span class="plug-name">mini.ai</span><span class="plug-tag">plugins/editor.lua</span></div>
       <p class="why">Smarter text objects — <code>ci(</code> and <code>va,</code> work across lines and over treesitter nodes.</p>
+      <dl class="keys">
+        <dt>a &middot; i</dt><dd>Around / inside a text object, operator or visual</dd>
+        <dt>an &middot; in</dt><dd>Around / inside the next text object</dd>
+        <dt>al &middot; il</dt><dd>Around / inside the last text object</dd>
+        <dt>g[ &middot; g]</dt><dd>Move to the left / right edge of &ldquo;around&rdquo;</dd>
+      </dl>
     </div>
 
     <div class="plug">
@@ -609,6 +637,9 @@
     <div class="plug">
       <div class="plug-head"><span class="plug-name">vim-maximizer</span><span class="plug-tag">no config</span></div>
       <p class="why">Zoom one split to full screen and back.</p>
+      <dl class="keys">
+        <dt>F3</dt><dd>Toggle the zoom</dd>
+      </dl>
     </div>
 
     <div class="plug">
@@ -735,25 +766,32 @@
 
     <div class="plug">
       <div class="plug-head"><span class="plug-name">lua/agents.lua</span><span class="plug-tag">not a plugin</span></div>
-      <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a right split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>. Keys are family-first: <code>\c</code> &rarr; family (<code>c</code> / <code>o</code> / <code>u</code>) &rarr; action; <code>\cc</code> / <code>\co</code> / <code>\cu</code> are which-key groups only. Sticky continue / verbose / yolo toggles are per family and only bound where that CLI supports them; they compose into the next bare or picker launch.</p>
-      <p class="why">The reviewer behind <code>\ccd</code> is a separate agent rather than a claude variant, precisely because sessions are keyed that way: as a variant it would reuse the claude already running in the repository and its flags would be dropped, so the keymap would silently hand back an agent that can still edit. It runs <code>claude</code> with <code>--disallowedTools Edit Write NotebookEdit Agent</code>, which removes the editing tools from the process and keeps it from delegating an edit to a subagent, plus a prompt closing the Bash routes to a write. It reuses the claude family&rsquo;s continue/verbose toggles but never takes yolo. The prompt asks for proposals as fenced <code>diff</code> blocks with <code>---</code>/<code>+++</code> headers and <code>@@</code> hunk lines, so each one says where it lands. Because claude refuses <code>--append-system-prompt</code> alongside <code>--append-system-prompt-file</code>, its picker inlines the chosen model&rsquo;s prompt file and appends the review rules to that text instead of passing the path.</p>
-      <p class="why">The claude model picker (<code>\ccp</code>) launches with <code>--remote-control</code>, so those sessions can be followed from another device. Opencode runs on the terminal&rsquo;s alternate screen and leaves no scrollback in the buffer, so in its normal mode <code>C-u</code> / <code>C-d</code> send PageUp / PageDown to opencode itself. Its export (<code>ctrl+x x</code>) and prompt editor (<code>ctrl+x e</code>) run <code>$VISUAL</code>, set to <code>scripts/remote-edit.lua</code>, which opens the file in a new tab of this nvim and returns to opencode once that buffer is closed. Observe toggles (<code>\cce</code> / <code>\coe</code> / <code>\cue</code>) track per-family state; the BufWritePost advise hook is not wired yet.</p>
+      <p class="why">Coding agents run as plain <code>jobstart(argv, { term = true })</code> terminals in a right split, keyed by <b>(agent, git root)</b> so several stay alive side by side in one repository. The agent table and keymaps live in <code>lua/plugins/agents.lua</code>. Keys are family-first: <code>\a</code> &rarr; family (<code>c</code> / <code>o</code> / <code>u</code>) &rarr; action, with the same action letters in every family: <code>l</code> launch, <code>p</code> model picker, <code>o</code> observe, <code>c</code> continue. <code>\ac</code> / <code>\ao</code> / <code>\au</code> are which-key groups only. Continue / verbose / yolo toggles are per family and only bound where that CLI supports them; they compose into the next launch, including one started from <code>\ap</code>. Continue and yolo switch off once a launch has used them, while verbose stays on. A toggle that is on does not reach a running session: the launch key says the flags were ignored and the toggle stays on.</p>
+      <p class="why">The reviewer behind <code>\acd</code> is a separate agent rather than a claude variant, precisely because sessions are keyed that way: as a variant it would reuse the claude already running in the repository and its flags would be dropped, so the keymap would silently hand back an agent that can still edit. It runs <code>claude</code> with <code>--disallowedTools Edit Write NotebookEdit Agent</code>, which removes the editing tools from the process and keeps it from delegating an edit to a subagent, plus a prompt closing the Bash routes to a write. It reuses the claude family&rsquo;s continue/verbose toggles but never takes yolo, and starting it from <code>\ap</code> goes through the same model picker as <code>\acd</code>. The prompt asks for proposals as fenced <code>diff</code> blocks with <code>---</code>/<code>+++</code> headers and <code>@@</code> hunk lines, so each one says where it lands. Because claude refuses <code>--append-system-prompt</code> alongside <code>--append-system-prompt-file</code>, its picker inlines the chosen model&rsquo;s prompt file and appends the review rules to that text instead of passing the path.</p>
+      <p class="why">Every claude launch adds <code>--remote-control</code>, so those sessions can be followed from another device; the reviewer does not. Opencode runs on the terminal&rsquo;s alternate screen and leaves no scrollback in the buffer, so in its normal mode <code>C-u</code> / <code>C-d</code> send PageUp / PageDown to opencode itself. Its export (<code>ctrl+x x</code>) and prompt editor (<code>ctrl+x e</code>) run <code>$VISUAL</code>, set to <code>scripts/remote-edit.lua</code>, which opens the file in a new tab of this nvim and returns to opencode once that buffer is closed.</p>
+      <p class="why"><code>\aco</code> turns on pair programming on save for this repository (<code>lua/agent-observer.lua</code>). It starts the reviewer if it is not running and leaves you in your buffer. Nothing polls: each <code>:w</code> starts a 2-second timer, so a burst of saves becomes one message holding that batch&rsquo;s diff, and a save with no change sends nothing. The reviewer comments only, proposes edits as diff hunks and replies <code>looks good</code> when there is nothing to raise; if its window is hidden, anything else raises a notification. The message is typed into its terminal, and an Enter landing on a permission prompt could answer it, so claude hooks passed through <code>--settings</code> report its state via <code>scripts/agent-state.lua</code>, and saves are held while it is working or while you are typing in its terminal. Opencode and cursor have no observer yet, so <code>\aoo</code> and <code>\auo</code> only say so.</p>
+      <p class="caveat">An unsent draft left in the reviewer&rsquo;s prompt is submitted together with the next message, because nvim cannot see it. A turn you interrupt ends without claude&rsquo;s Stop hook, so saves stay held until its idle notification arrives, about a minute later, or until your next prompt finishes.</p>
       <dl class="keys">
-        <dt>\ccc</dt><dd>claude bare</dd>
-        <dt>\ccp</dt><dd>claude model picker</dd>
-        <dt>\ccd</dt><dd>claude reviewer, no editing tools</dd>
-        <dt>\cce</dt><dd>claude observe toggle</dd>
-        <dt>\ccn &middot; \ccv &middot; \ccy</dt><dd>claude continue / verbose / yolo toggles</dd>
-        <dt>\coo</dt><dd>opencode bare</dd>
-        <dt>\cop</dt><dd>opencode model picker</dd>
-        <dt>\coe</dt><dd>opencode observe toggle</dd>
-        <dt>\con</dt><dd>opencode continue toggle</dd>
-        <dt>\cuu</dt><dd>cursor bare</dd>
-        <dt>\cup</dt><dd>cursor model picker</dd>
-        <dt>\cue</dt><dd>cursor observe toggle</dd>
-        <dt>\cun &middot; \cuy</dt><dd>cursor continue / yolo toggles</dd>
-        <dt>\cp</dt><dd>Pick or focus a running agent</dd>
-        <dt>\ch</dt><dd>Hide (from an agent terminal)</dd>
+        <dt>\acl</dt><dd>claude on opus with its prompt</dd>
+        <dt>\acp</dt><dd>claude model picker</dd>
+        <dt>\acd</dt><dd>claude reviewer, no editing tools</dd>
+        <dt>\aco</dt><dd>Pair programming on save, on / off</dd>
+        <dt>\acc &middot; \acv &middot; \acy</dt><dd>claude continue / verbose / yolo toggles</dd>
+        <dt>\aol</dt><dd>opencode bare</dd>
+        <dt>\aop</dt><dd>opencode model picker</dd>
+        <dt>\aoo</dt><dd>opencode observe, not available yet</dd>
+        <dt>\aoc</dt><dd>opencode continue toggle</dd>
+        <dt>\aul</dt><dd>cursor bare</dd>
+        <dt>\aup</dt><dd>cursor model picker</dd>
+        <dt>\auo</dt><dd>cursor observe, not available yet</dd>
+        <dt>\auc &middot; \auy</dt><dd>cursor continue / yolo toggles</dd>
+        <dt>\ap</dt><dd>Pick or focus a running agent</dd>
+        <dt>\ah</dt><dd>Hide (from an agent terminal)</dd>
+        <dt>M-r</dt><dd>Redraw the terminal</dd>
+        <dt>C-h &middot; C-j &middot; C-k &middot; C-l</dt><dd>Leave the agent terminal, view frozen where it is</dd>
+        <dt>M-h &middot; M-j &middot; M-k &middot; M-l</dt><dd>Leave the agent terminal, window keeps following output</dd>
+        <dt>C-w L &middot; C-w J</dt><dd>Move the agent window right / to the bottom, at its configured size</dd>
+        <dt>C-u &middot; C-d</dt><dd>Page up / down inside opencode, in normal mode</dd>
       </dl>
     </div>
   </section>

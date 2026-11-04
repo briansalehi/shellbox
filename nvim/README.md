@@ -91,7 +91,7 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 | --- | --- |
 | `telescope.nvim` + `telescope-fzf-native` | Fuzzy picker. `\ff` files, `\fg` grep, `\fb` buffers (`<C-d>` closes one), `\fx` closes all other buffers, `\fk` keymaps. fzf-native is a C library, so a `PackChanged` hook runs `make` for it on install and update |
 | `telescope-ui-select` | Routes every `vim.ui.select` through telescope, so long prompts get a fuzzy filter instead of a numbered cmdline list. No keymap of its own |
-| `harpoon` (v2) | Pin 4 files, jump with `\1`–`\4`. Faster than a picker for the files in flight |
+| `harpoon` (v2) | Pin files with `\ha`, jump to the first four with `\1`–`\4`. `\hh` opens the list as a buffer: `dd` unpins a line and `:w` saves, while `q` / `<Esc>` discard the edits. Faster than a picker for the files in flight |
 | `flash.nvim` | Jump anywhere on screen by typing a label (`\s`), or select treesitter nodes (`\S`) |
 | `oil.nvim` | File manager as an editable buffer (`-` or `\e`) — rename/delete by editing lines, `\ea` applies changes |
 | `vim-lastplace` | Restores cursor to where the file was left |
@@ -104,20 +104,20 @@ table below **and** `docs/plugins.html`; record the change in `docs/changelog.ht
 | --- | --- |
 | `nvim-cmp` + `cmp-nvim-lsp` + `cmp-buffer` | Completion, manual trigger only (`autocomplete = false`, `<C-Space>`) |
 | `LuaSnip` + `cmp_luasnip` + `friendly-snippets` | Snippet engine and community snippet pack |
-| `nvim-surround` | Add/change/delete surrounding quotes and brackets (`ys`, `cs`, `ds`) |
+| `nvim-surround` | Add/change/delete surrounding quotes and brackets (`ys`, `cs`, `ds`, `yss` for a line, `S` in visual mode) |
 | `vim-illuminate` | Faintly highlights other occurrences of the symbol under the cursor. lsp (clangd) then regex — the treesitter provider needs nvim-treesitter master. `<A-n>` / `<A-p>` jump between them, `<A-i>` selects one |
 | `mini.ai` | Smarter text objects (`ci(`, `va,`) across lines and treesitter nodes |
 | `nvim-treesitter` | Syntax/indent parsing for c, cpp, lua, cmake, python, rust |
 | `nvim-treesitter-context` | Pins the enclosing function/loop to the top of the window while scrolling. Capped at 3 lines, off in windows under 20 rows. `[c` jumps to the context line (falls through to the builtin in diff mode) |
 | `conform.nvim` | Formatting via uncrustify for C/C++, `\uf` |
-| `vim-maximizer` | Zoom one split to full screen. No config |
+| `vim-maximizer` | Zoom one split to full screen, `<F3>`. No config |
 | `bullets.vim`, `vim-livedown` | Markdown list auto-numbering, live browser preview. No config |
 
 ### C/C++ workflow
 
 | Plugin | Purpose |
 | --- | --- |
-| `cmake-tools.nvim` | Configure, build, run, test, presets, kits, build types — all on `\m*`. `\mM` opens the ESP-IDF serial monitor in a terminal at the project root, since the quickfix panel has no TTY for it, and `\ms` stops it. Cache options are not its job, so `\mv` (and `\mV` for advanced ones) lists `cmake -LH`, stages edits into the generate options `\mc` shows, and reconfigures once |
+| `cmake-tools.nvim` | Configure, build, run, test, presets, kits, build types — all on `\m*`. `\mi` installs and `\mI` installs to a prefix you enter. `\mM` opens the ESP-IDF serial monitor in a terminal at the project root, since the quickfix panel has no TTY for it, and `\ms` stops it. Cache options are not its job, so `\mv` (and `\mV` for advanced ones) lists `cmake -LH`, stages edits into the generate options `\mc` shows, and reconfigures once |
 | `overseer.nvim` + `toggleterm.nvim` | Task runner and terminal that cmake-tools drives for its build/run panels |
 | `clangd_extensions.nvim` | Inlay hints, AST view, source/header switch, type hierarchy, plus `\li` / `\lI` code actions |
 | `nvim-dap` + `nvim-dap-ui` | Debugger on `\d*`. `plugins.cmake` must load first — dap re-registers cmake-tools' debug function |
@@ -229,42 +229,48 @@ width (or a 50% bottom split with `orientation = 'horizontal'`), keyed by
 repository. `lua/plugins/agents.lua` holds the agent table and the keymaps; adding
 one is a new entry plus a `map(...)` line.
 
-Keys are family-first: `\c` → family (`c` claude, `o` opencode, `u` cursor) →
-action. `\cc` / `\co` / `\cu` are which-key groups only. Sticky modifier toggles
+Keys are family-first: `\a` → family (`c` claude, `o` opencode, `u` cursor) →
+action, with the same action letters in every family: `l` launch, `p` model picker,
+`o` observe, `c` continue. `\ac` / `\ao` / `\au` are which-key groups only. Modifier toggles
 (continue / verbose / yolo) are per family and only exist where that CLI supports
-them; they compose into the next bare or picker launch. Notify reports on/off.
+them; they compose into the next launch, including one started from `\ap`. Continue
+and yolo switch off once a launch has used them, while verbose stays on. A toggle
+that is on does not reach a running session: the launch key says the flags were
+ignored and the toggle stays on. Notify reports on/off.
 
 | Keymap | Action |
 | --- | --- |
-| `\ccc` | claude bare |
-| `\ccp` | claude model picker |
-| `\ccd` | claude reviewer (no edits; model picker) |
-| `\cce` | claude observe toggle |
-| `\ccn` / `\ccv` / `\ccy` | claude continue / verbose / yolo toggles |
-| `\coo` | opencode bare |
-| `\cop` | opencode model picker |
-| `\coe` | opencode observe toggle |
-| `\con` | opencode continue toggle |
-| `\cuu` | cursor bare |
-| `\cup` | cursor model picker |
-| `\cue` | cursor observe toggle |
-| `\cun` / `\cuy` | cursor continue / yolo toggles |
-| `\cp` | pick or focus a running agent |
-| `\ch` | hide (agent terminal buffer only) |
+| `\acl` | claude on opus with its prompt, falling back to claude's default model without `opus.md` |
+| `\acp` | claude model picker |
+| `\acd` | claude reviewer (no edits; model picker) |
+| `\aco` | pair programming on save, on / off |
+| `\acc` / `\acv` / `\acy` | claude continue / verbose / yolo toggles |
+| `\aol` | opencode bare |
+| `\aop` | opencode model picker |
+| `\aoo` | opencode observe, not available yet |
+| `\aoc` | opencode continue toggle |
+| `\aul` | cursor bare |
+| `\aup` | cursor model picker |
+| `\auo` | cursor observe, not available yet |
+| `\auc` / `\auy` | cursor continue / yolo toggles |
+| `\ap` | pick or focus a running agent |
+| `\ah` | hide (agent terminal buffer only) |
 | `<M-r>` | redraw the terminal (`<C-l>` is not free: `<C-h/j/k/l>` leave the window) |
 | `<M-h/j/k/l>` | leave the terminal like `<C-h/j/k/l>`, but the agent window keeps scrolling with new output |
 
 Model pickers are per-agent, because each agent takes a system prompt through
 different flags and must never be offered each other's models. Claude lists
 `~/.config/models/claude/*.md` and launches
-`--remote-control --model <name> --append-system-prompt-file <path>`, so those
-sessions can be followed from another device. The reviewer under `\ccd` is a
+`--model <name> --append-system-prompt-file <path>`. Every claude launch adds
+`--remote-control`, so those sessions can be followed from another device; the
+reviewer does not. The reviewer under `\acd` is a
 separate agent rather than a claude variant, so a review and a working session stay
 alive side by side in one repository. It adds
 `--disallowedTools Edit Write NotebookEdit Agent`, which also keeps it from
 delegating an edit to a subagent, and a prompt forbidding writes through Bash and
 installing, deploying, or publishing targets. Building and testing stay allowed.
-It reuses the claude family's continue/verbose toggles but never takes yolo. The
+It reuses the claude family's continue/verbose toggles but never takes yolo, and
+starting it from `\ap` goes through the same model picker as `\acd`. The
 prompt asks for proposals as fenced `diff` blocks with `---`/`+++` headers and
 `@@` hunk lines, so each one says where it lands. Because claude refuses `--append-system-prompt` together with
 `--append-system-prompt-file`, it inlines the picked model's prompt file and
@@ -277,8 +283,22 @@ frontmatter `model:` names that model, and such a model is shown as
 what `cursor-agent --list-models` reports (cached the same way, and it exits
 non-zero until `cursor-agent login` has run) and launches `--model <name>` with
 nothing else: cursor takes its instructions from `.cursor/rules` and `AGENTS.md`,
-so it has no prompt flag to pair with a model. Observe toggles track per-family
-state only for now; the BufWritePost advise hook is not wired yet.
+so it has no prompt flag to pair with a model.
+
+`\aco` turns on pair programming on save for this repository
+(`lua/agent-observer.lua`). It starts the reviewer if it is not running and leaves
+you in your buffer. Nothing polls: each `:w` starts a 2-second timer, so a burst of
+saves becomes one message holding that batch's diff, and a save with no change sends
+nothing. The reviewer comments only, proposes edits as diff hunks and replies
+`looks good` when there is nothing to raise; if its window is hidden, anything else
+raises a notification. The message is typed into its terminal, and an Enter landing
+on a permission prompt could answer it, so claude hooks passed through `--settings`
+report its state via `scripts/agent-state.lua`, and saves are held while it is
+working or while you are typing in its terminal. An unsent draft left in its prompt
+is submitted together with the next message, because nvim cannot see it. A turn you
+interrupt ends without claude's Stop hook, so saves stay held until its idle
+notification arrives, about a minute later, or until your next prompt finishes.
+Opencode and cursor have no observer yet, so `\aoo` and `\auo` only say so.
 
 Opening or toggling an agent lands in insert mode, but nothing re-enters insert on
 `WinEnter`, so leaving with `<C-\><C-n>` and switching windows keeps the scrollback
