@@ -1,0 +1,27 @@
+default_profile = "basyskom"
+
+[profiles.basyskom]
+user_id = "@hsalehipour:matrix.basyskom.com"
+
+[layout]
+style = "restore"
+
+[settings]
+default_room = "chats"
+username_display = "localpart"
+
+[aliases]
+"c" = "chats"
+"o" = "open"
+"d" = "download"
+"e" = "edit"
+"r" = "rooms"
+
+[settings.notifications]
+enabled = true
+show_message = true
+sound_hint = "message-new-instant"
+via = "desktop"
+
+[settings.image_preview]
+enabled = true
