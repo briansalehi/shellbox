@@ -9,10 +9,12 @@ distro/OS at runtime). It has **three deployment mechanisms** — knowing which 
 directory uses is the key to working here:
 
 1. **`make`-installed** (`scripts/`, `aliases/`, `services/` + `systemd/`) — copied into place.
-2. **Symlink-deployed** (`bash/`, `nvim/`, `tmux/`, `mutt/`, `msmtp/`, `ssh/`, `llvm/`) — the
+2. **Symlink-deployed** (`bash/`, `nvim/`, `tmux/`, `mutt/`, `msmtp/`, `ssh/`, `llvm/`, `gnupg/`) — the
    home-directory config path is a symlink back into this repo, so **editing a file here edits
    the live config directly**. E.g. `~/.bashrc → bash/bashrc`, `~/.config/nvim → nvim/`,
-   `~/.tmux.conf → tmux/tmux.conf`. There is no install step for these; changes take effect on
+   `~/.tmux.conf → tmux/tmux.conf`, `~/.gnupg/gpg-agent.conf → gnupg/gpg-agent.conf` (only that
+   file is linked, the rest of `~/.gnupg` holds keys and stays out of the repo; run
+   `gpgconf --reload gpg-agent` after editing it). There is no install step for these; changes take effect on
    next shell/app start.
 3. **`skills/`** — both: `make <skill>` symlinks `skills/<name>` to
    `~/.claude/skills/<name>`, and after that one-time step edits here are live. Deployed with a
