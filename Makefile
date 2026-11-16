@@ -87,4 +87,4 @@ service_notice:
 	@echo
 
 test:
-	shellcheck $(wildcard scripts/*) $(wildcard aliases/*) $(wildcard services/*)
+	shellcheck $(shell grep -L "^#!.*python" $(wildcard scripts/*) $(wildcard aliases/*) $(wildcard services/*))

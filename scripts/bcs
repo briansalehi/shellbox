@@ -1,0 +1,772 @@
+#!/usr/bin/env python3
+"""Book time on BCS from the terminal.
+
+Credentials are read from a gpg encrypted file (default ~/.config/bcs/credentials.asc) holding:
+    BCS_USER=<user>
+    BCS_PASSWORD=<password>
+
+The session is cached in ~/.cache/bcs/session.json and reused until it expires.
+When BCS is unreachable, the vpn function from ~/.bash_aliases is used if present,
+and the VPN is disconnected again on exit.
+"""
+
+import argparse
+import datetime
+import gzip
+import html
+import http.client
+import json
+import os
+import re
+import socket
+import subprocess
+import sys
+import time
+import urllib.parse
+import zlib
+import zoneinfo
+from html.parser import HTMLParser
+from pathlib import Path
+
+HOST = "projektron.ultratronik.de"
+PORT = 8080
+DAY_PATH = "/bcs/mybcs/dayeffortrecording/display"
+WEEK_PATH = "/bcs/mybcs/multidaytimerecording/display"
+ZONE = zoneinfo.ZoneInfo("Europe/Berlin")
+LOGIN_PATH = "/bcs/login"
+CREDENTIALS = Path(os.environ.get("BCS_CREDENTIALS", "~/.config/bcs/credentials.asc")).expanduser()
+CACHE = Path(os.environ.get("XDG_CACHE_HOME", "~/.cache")).expanduser() / "bcs"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:160.0) Gecko/20100101 Firefox/160.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+}
+
+TASKLIST = "daytimerecording,Content,daytimerecordingTaskList"
+BOOKINGS = "daytimerecording,Content,daytimerecordingAllBookingsOfTheDay"
+
+VPN_SHELL = 'source ~/.bash_aliases 2>/dev/null; declare -F vpn >/dev/null || exit 127; vpn "$1"'
+
+
+class BcsError(Exception):
+    pass
+
+
+def color(code, text, stream):
+    return f"\033[{code}m{text}\033[0m" if stream.isatty() else text
+
+
+class Session:
+    def __init__(self, path):
+        self.path = path
+        try:
+            self.cookies = json.loads(path.read_text())
+        except (OSError, ValueError):
+            self.cookies = {}
+
+    def save(self):
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            json.dump(self.cookies, f)
+
+    def request(self, method, path, body=None, headers=None):
+        headers = dict(headers or {})
+        for _ in range(5):
+            sent = dict(HEADERS)
+            sent.update(headers)
+            sent = {k: v for k, v in sent.items() if v is not None}
+            if self.cookies:
+                sent["Cookie"] = "; ".join(f"{k}={v}" for k, v in self.cookies.items())
+            conn = http.client.HTTPConnection(HOST, PORT, timeout=30)
+            try:
+                conn.request(method, path, body=body, headers=sent)
+                response = conn.getresponse()
+                data = response.read()
+            finally:
+                conn.close()
+
+            for cookie in response.headers.get_all("Set-Cookie") or []:
+                name, _, rest = cookie.partition("=")
+                value = rest.split(";", 1)[0]
+                if value and "max-age=0" not in cookie.lower():
+                    self.cookies[name.strip()] = value
+                else:
+                    self.cookies.pop(name.strip(), None)
+            self.save()
+
+            location = response.getheader("Location")
+            if response.status in (301, 302, 303, 307, 308) and location:
+                target = urllib.parse.urlsplit(location)
+                path = target.path + (f"?{target.query}" if target.query else "")
+                if response.status not in (307, 308):
+                    method, body = "GET", None
+                    headers.pop("Content-Type", None)
+                    headers.pop("Origin", None)
+                continue
+            if response.status >= 400:
+                raise BcsError(f"HTTP {response.status} on {path}")
+
+            encoding = response.getheader("Content-Encoding", "")
+            if encoding == "gzip":
+                data = gzip.decompress(data)
+            elif encoding == "deflate":
+                data = zlib.decompress(data)
+            return data.decode(response.headers.get_content_charset() or "utf-8", errors="replace")
+        raise BcsError(f"Too many redirects on {path}")
+
+    def post(self, path, pairs):
+        body = urllib.parse.urlencode([(name, value) for name, value in pairs]).encode()
+        return self.request("POST", path, body, {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "null",
+        })
+
+
+def credentials():
+    if not CREDENTIALS.is_file():
+        raise BcsError(f"Credentials file {CREDENTIALS} not found")
+    result = subprocess.run(["gpg", "--quiet", "--decrypt", str(CREDENTIALS)],
+                            stdout=subprocess.PIPE, check=False, text=True)
+    if result.returncode != 0:
+        raise BcsError(f"Cannot decrypt {CREDENTIALS}")
+    values = {}
+    for line in result.stdout.splitlines():
+        key, sep, value = line.strip().removeprefix("export ").partition("=")
+        if sep:
+            values[key.strip()] = value.strip().strip("'\"")
+    if not values.get("BCS_USER") or not values.get("BCS_PASSWORD"):
+        raise BcsError(f"{CREDENTIALS} must define BCS_USER and BCS_PASSWORD")
+    return values["BCS_USER"], values["BCS_PASSWORD"]
+
+
+def day_path(day):
+    selection = "daytimerecording,Selections,effortRecordingDate"
+    return DAY_PATH + "?" + urllib.parse.urlencode([
+        (f"{selection},month", day.month),
+        (f"{selection},year", day.year),
+        (f"{selection},day", day.day),
+    ])
+
+
+def day_page(session, day):
+    """Returns the booking page of a day, logging in only when the cached session expired."""
+    page = session.request("GET", day_path(day))
+    if TASKLIST not in page:
+        login(session)
+        page = session.request("GET", day_path(day))
+        if TASKLIST not in page:
+            raise BcsError("Login failed")
+    shown = set(re.findall(r'\.recordDate" type="hidden" value="([^"]+)"', page))
+    if shown and shown != {day.strftime("%m/%d/%Y")}:
+        raise BcsError(f"BCS shows {', '.join(sorted(shown))} instead of {day:%m/%d/%Y}")
+    return page
+
+
+def login(session):
+
+    user, password = credentials()
+    login = session.request("GET", LOGIN_PATH)
+    form = re.search(r'<form[^>]*class="loginForm".*?</form>', login, flags=re.S)
+    transaction = re.search(r'name="BcsFormTransactionId" type="hidden" value="([^"]*)"', form.group(0) if form else "")
+    session.post(f"{LOGIN_PATH}/*/display?is_Ajax_Login=false", [
+        ("user", user),
+        ("pwd", password),
+        ("isPassword", "pwd"),
+        ("login", "Log in"),
+        ("BcsFormTransactionId", transaction.group(1) if transaction else ""),
+    ])
+
+
+def rows(page, component):
+    """Yields (row oid, task oid, task name, fields) of a list component on the day page."""
+    for m in re.finditer(r'<tr[^>]*data-row-id="([^"]+)"[^>]*data-taskoid="([^"]+)"', page):
+        row_oid, task_oid = m.groups()
+        row = page[m.end():page.find("</tr>", m.end())]
+        if f'name="{component},{row_oid}_helper"' not in row:
+            continue
+        names = [html.unescape(re.sub(r"<[^>]+>", "", a)).strip()
+                 for a in re.findall(r"<a[^>]*objectcontent[^>]*>(.*?)</a>", row, flags=re.S)]
+        following = re.compile(r"<tr[^>]*data-row-id=").search(page, m.end())
+        full = page[m.end():following.start() if following else len(page)]
+        key = re.escape(f"{component},Columns,") + r'[^,"]+,listeditoid_' + re.escape(row_oid) + r"\."
+        fields = {}
+        for tag in re.findall(r"<input\s[^>]*>", full):
+            name = re.search(r'\sname="' + key + r'([^"]+)"', tag)
+            value = re.search(r'\svalue="([^"]*)"', tag)
+            if name:
+                fields[name.group(1)] = html.unescape(value.group(1)) if value else ""
+        text = re.search(r'<textarea[^>]*\sname="' + key + r'description"[^>]*>([^<]*)', full)
+        fields["description"] = html.unescape(text.group(1)).strip() if text else ""
+        yield row_oid, task_oid, " › ".join(n for n in names if n), fields
+
+
+class Form(HTMLParser):
+    """Collects the controls of the page form the way a browser submits them."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.inside = False
+        self.pairs = []
+        self.select = None
+        self.textarea = None
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "form" and a.get("name") == "pageform":
+            self.inside = True
+        if not self.inside or "disabled" in a:
+            return
+        name = a.get("name")
+        if tag == "input" and name:
+            kind = (a.get("type") or "text").lower()
+            if kind in ("submit", "button", "image", "reset", "file"):
+                return
+            if kind in ("checkbox", "radio") and "checked" not in a:
+                return
+            default = "on" if kind in ("checkbox", "radio") else ""
+            self.pairs.append([name, a.get("value") or default])
+        elif tag == "select" and name:
+            self.select = {"name": name, "first": None, "chosen": [], "multiple": "multiple" in a}
+        elif tag == "option" and self.select is not None:
+            value = a.get("value") or ""
+            if self.select["first"] is None:
+                self.select["first"] = value
+            if "selected" in a:
+                self.select["chosen"].append(value)
+        elif tag == "textarea" and name:
+            self.textarea = [name, ""]
+
+    def handle_data(self, data):
+        if self.textarea is not None:
+            self.textarea[1] += data
+
+    def handle_endtag(self, tag):
+        if tag == "form" and self.inside:
+            self.inside = False
+        elif tag == "select" and self.select is not None:
+            s = self.select
+            chosen = s["chosen"] or ([] if s["multiple"] or s["first"] is None else [s["first"]])
+            self.pairs += [[s["name"], v] for v in chosen]
+            self.select = None
+        elif tag == "textarea" and self.textarea is not None:
+            name, value = self.textarea
+            self.pairs.append([name, value[1:] if value.startswith("\n") else value])
+            self.textarea = None
+
+
+def parse_time(text):
+    m = re.fullmatch(r"([01]?\d|2[0-3]):([0-5]\d)", text)
+    if not m:
+        raise BcsError(f"Invalid time {text}, expected HH:MM")
+    return int(m.group(1)), int(m.group(2))
+
+
+def task_name(name, out=sys.stdout):
+    *path, leaf = name.split(" › ")
+    arrow = color("35", "›", out)
+    return "".join(f"{color('2', part, out)} {arrow} " for part in path) + color("1;36", leaf, out)
+
+
+def start_key(fields):
+    hour, minute = fields.get("effortStart_hour", ""), fields.get("effortStart_minute", "")
+    return (int(hour), int(minute)) if hour.isdigit() and minute.isdigit() else (24, 0)
+
+
+def list_day(session, day):
+    page = day_page(session, day)
+    out = sys.stdout
+
+    print(color("1;35", "Tasks", out))
+    print()
+    seen = set()
+    for _, task, name, _ in rows(page, TASKLIST):
+        if task not in seen:
+            seen.add(task)
+            print(f"  {color('2', task, out)}  {task_name(name)}")
+    print()
+    print_bookings(page, day)
+
+
+def duration(minutes):
+    return f"{minutes // 60}:{minutes % 60:02d} h"
+
+
+def print_bookings(page, day):
+    """Prints the bookings of a day sorted by start time, returns their total minutes."""
+    out = sys.stdout
+    bookings = sorted(rows(page, BOOKINGS), key=lambda r: start_key(r[3]))
+    total = 0
+    for _, _, _, f in bookings:
+        hour, minute = f.get("effortExpense_hour", ""), f.get("effortExpense_minute", "")
+        total += int(hour) * 60 + int(minute) if hour.isdigit() and minute.isdigit() else 0
+
+    print(color("1;35", f"Bookings of {day:%a %Y-%m-%d}", out) + "  " + color("33", duration(total), out))
+    if bookings:
+        print()
+    for _, _, name, f in bookings:
+        span = "{}:{}-{}:{}".format(f.get("effortStart_hour", ""), f.get("effortStart_minute", ""),
+                                    f.get("effortEnd_hour", ""), f.get("effortEnd_minute", ""))
+        hours = "{}:{} h".format(f.get("effortExpense_hour", ""), f.get("effortExpense_minute", ""))
+        line = f"  {color('1;32', span, out)}  {color('33', hours, out)}  {task_name(name)}"
+        if f["description"]:
+            line += "  " + color("2;3", f["description"], out)
+        print(line)
+    return total
+
+
+def week_path(day):
+    selection = "multidaytimerecording,Selections,effortRecordingDate"
+    return WEEK_PATH + "?" + urllib.parse.urlencode([
+        (f"{selection},month", day.month),
+        (f"{selection},year", day.year),
+        (f"{selection},day", day.day),
+    ])
+
+
+def week_page(session, day):
+    """Returns the week booking page, logging in only when the cached session expired."""
+    marker = "multidaytimerecording,Content,multidaytimerecordingTaskList"
+    page = session.request("GET", week_path(day))
+    if marker not in page:
+        login(session)
+        page = session.request("GET", week_path(day))
+        if marker not in page:
+            raise BcsError("Login failed")
+    return page
+
+
+def week_durations(page):
+    """Returns the week's days and {task oid: (name, {day: minutes})} of tasks with booked time."""
+    days = sorted({int(ms) for ms in re.findall(r'name="days\.(\d{13})"', page)})
+    dates = {ms: datetime.datetime.fromtimestamp(ms / 1000, ZONE).date() for ms in days}
+    tasks = {}
+    for component in ("TaskList", "LastBookedTasks"):
+        prefix = f"multidaytimerecording,Content,multidaytimerecording{component},Columns,days,listeditoid_"
+        for m in re.finditer(r'<tr[^>]*data-row-id="([^"]+)"', page):
+            oid = m.group(1)
+            following = re.compile(r"<tr[^>]*data-row-id=").search(page, m.end())
+            row = page[m.end():following.start() if following else len(page)]
+            if oid in tasks or prefix + oid not in row:
+                continue
+            names = [html.unescape(re.sub(r"<[^>]+>", "", a)).strip()
+                     for a in re.findall(r"<a[^>]*objectcontent[^>]*>(.*?)</a>", row[:row.find("</tr>")], flags=re.S)]
+            parts = {}
+            field = re.compile(r'\sname="' + re.escape(prefix + oid) + r'\.days_(\d{13}),[^"]*_(hour|minute)"')
+            for tag in re.findall(r"<input\s[^>]*>", row):
+                name, value = field.search(tag), re.search(r'\svalue="(\d+)"', tag)
+                if name and value:
+                    parts.setdefault(int(name.group(1)), {})[name.group(2)] = int(value.group(1))
+            minutes = {dates[ms]: v.get("hour", 0) * 60 + v.get("minute", 0) for ms, v in parts.items() if ms in dates}
+            if any(minutes.values()):
+                tasks[oid] = (" › ".join(n for n in names if n), minutes)
+    return [dates[ms] for ms in days], tasks
+
+
+def list_week(session, day):
+    out = sys.stdout
+    days, tasks = week_durations(week_page(session, day))
+    if not days:
+        raise BcsError("BCS week view shows no days")
+    today = datetime.date.today()
+    if not days[0] <= today <= days[-1]:
+        # BCS keeps the selected week in the session, switch it back to this week
+        session.request("GET", week_path(today))
+
+    def cell(minutes, code="33"):
+        text = f"{minutes // 60}:{minutes % 60:02d}" if minutes else "-"
+        return color(code if minutes else "2", f"{text:>6}", out)
+
+    print(color("1;35", f"Week {days[0]:%V}, {days[0]:%Y-%m-%d} to {days[-1]:%Y-%m-%d}", out))
+    print()
+    print("  " + "".join(color("1", f"{d:%a %d}".rjust(7), out) for d in days) + color("1", "   Total", out))
+    for _, (name, minutes) in tasks.items():
+        row = "".join(" " + cell(minutes.get(d, 0)) for d in days)
+        print(f"  {row}  {cell(sum(minutes.values()), '1;33')}  {task_name(name.split(' › ')[-1])}")
+    totals = [sum(m.get(d, 0) for _, m in tasks.values()) for d in days]
+    print("  " + "".join(" " + cell(t, "1;33") for t in totals) + "  " + cell(sum(totals), "1;33"))
+
+
+def booked(page, task, start, end):
+    keys = ("effortStart_hour", "effortStart_minute", "effortEnd_hour", "effortEnd_minute")
+    for _, booked_task, _, f in rows(page, BOOKINGS):
+        have = [f.get(k, "") for k in keys]
+        if booked_task == task and all(h.isdigit() for h in have) and tuple(map(int, have)) == start + end:
+            return True
+    return False
+
+
+def new_row(form, row, task):
+    """Copies the task list row of an existing booking like the + button, returns the new row's fields."""
+    new = f"$new${int(time.time() * 1000)}_JTask"
+    prefix = f"{TASKLIST},Columns,"
+    original = re.compile(re.escape(prefix) + r"([^,]+),listeditoid_" + re.escape(row) + r"\.(.+)")
+    helper = f"{TASKLIST},{row}_helper"
+    positions = [i for i, (name, _) in enumerate(form.pairs) if name == helper or original.fullmatch(name)]
+    if not positions:
+        raise BcsError(f"Task {task} has no row to copy on the page")
+
+    copies = []
+    for i in positions:
+        name, value = form.pairs[i]
+        m = original.fullmatch(name)
+        if m and m.group(1) == "SELECTION":
+            continue
+        if m:
+            name = f"{prefix}{m.group(1)},listeditoid_{new}.{m.group(2)}"
+            value = {"recordOid": "", "recordType": "unsavedeffort"}.get(m.group(2), value)
+        copies.append([name, value])
+    form.pairs[positions[-1] + 1:positions[-1] + 1] = copies
+
+    order = []
+    plusminus = re.compile(re.escape(prefix) + r"\[plusminus\],listeditoid_(.+)\.\[plusminus\]\.editable_children")
+    for name, _ in form.pairs:
+        m = plusminus.fullmatch(name)
+        if m and m.group(1) not in order:
+            order.append(m.group(1))
+    last = max(i for i, (name, _) in enumerate(form.pairs) if name.startswith(prefix))
+    form.pairs.insert(last + 1, [f"{TASKLIST},tableLineNumber",
+                                 json.dumps({oid: i for i, oid in enumerate(order)}, separators=(",", ":"))])
+    return new
+
+
+def book(session, day, query, start_text, end_text, description):
+    start, end = parse_time(start_text), parse_time(end_text)
+    minutes = (end[0] * 60 + end[1]) - (start[0] * 60 + start[1])
+    if minutes <= 0:
+        raise BcsError("End time must be after start time")
+
+    page = day_page(session, day)
+    found = [(row, task, name) for row, task, name, _ in rows(page, TASKLIST)
+             if query.lower() == task.lower() or query.lower() in name.lower()]
+    tasks = {task: name for _, task, name in found}
+    if not tasks:
+        raise BcsError(f"No task matches '{query}'")
+    if len(tasks) > 1:
+        raise BcsError(f"'{query}' matches more than one task:\n" + "\n".join(f"  {n}" for n in tasks.values()))
+    task, name = tasks.popitem()
+
+    form = Form()
+    form.feed(page)
+    rows_of_task = [row for row, _, _ in found]
+    row = task if task in rows_of_task else new_row(form, rows_of_task[0], task)
+
+    values = {
+        "effortStart_hour": str(start[0]), "effortStart_minute": f"{start[1]:02d}",
+        "effortEnd_hour": str(end[0]), "effortEnd_minute": f"{end[1]:02d}",
+        "effortExpense_hour": str(minutes // 60), "effortExpense_minute": f"{minutes % 60:02d}",
+        "description": description,
+    }
+    field = re.compile(re.escape(f"{TASKLIST},Columns,") + r"[^,]+,listeditoid_" + re.escape(row) + r"\.(.+)")
+    changed = 0
+    for pair in form.pairs:
+        m = field.fullmatch(pair[0])
+        if m and m.group(1) in values:
+            pair[1] = values[m.group(1)]
+            changed += 1
+    if changed != len(values):
+        raise BcsError(f"Task {task} has no editable row on the page")
+    form.pairs.append(["daytimerecording,Apply", "Save"])
+    form.pairs.append(["CSRF_Token", session.cookies.get("CSRF_Token", "")])
+
+    session.post(DAY_PATH, form.pairs)
+
+    if not booked(session.request("GET", day_path(day)), task, start, end):
+        raise BcsError("Booking not found after saving")
+    print(f"{color('1;32', 'Booked', sys.stdout)} {color('32', f'{start_text}-{end_text}', sys.stdout)}"
+          f" on {day:%a %Y-%m-%d} on {task_name(name)}")
+
+
+def remove(session, day, start_text, query):
+    start = parse_time(start_text)
+    page = day_page(session, day)
+    keys = ("effortStart_hour", "effortStart_minute")
+    candidates = []
+    for row, task, name, f in rows(page, BOOKINGS):
+        have = [f.get(k, "") for k in keys]
+        if all(h.isdigit() for h in have) and tuple(map(int, have)) == start:
+            if not query or query.lower() == task.lower() or query.lower() in name.lower():
+                candidates.append((row, task, name, f))
+    if not candidates:
+        raise BcsError(f"No booking starts at {start_text} on {day:%a %Y-%m-%d}")
+    if len(candidates) > 1:
+        raise BcsError(f"More than one booking starts at {start_text}, name the task:\n"
+                       + "\n".join(f"  {n}" for _, _, n, _ in candidates))
+    effort, task, name, f = candidates[0]
+
+    cleared = {
+        "effortStart_hour": "", "effortStart_minute": "",
+        "effortEnd_hour": "", "effortEnd_minute": "",
+        "effortExpense_hour": "0", "effortExpense_minute": "00",
+        "effortPause_hour": "0", "effortPause_minute": "00",
+        "description": "",
+    }
+    # the booking appears in several lists of the page, clear it in every one like the browser keeps them in sync
+    field = re.compile(r"daytimerecording,Content,[^,]+,Columns,[^,]+,listeditoid_" + re.escape(effort) + r"\.(.+)")
+    form = Form()
+    form.feed(page)
+    changed = 0
+    for pair in form.pairs:
+        m = field.fullmatch(pair[0])
+        if m and m.group(1) in cleared:
+            pair[1] = cleared[m.group(1)]
+            changed += 1
+    if not changed:
+        raise BcsError(f"Booking {effort} has no editable fields on the page")
+    form.pairs.append(["daytimerecording,Apply", "Save"])
+    form.pairs.append(["CSRF_Token", session.cookies.get("CSRF_Token", "")])
+
+    session.post(DAY_PATH, form.pairs)
+
+    if any(row == effort for row, _, _, _ in rows(session.request("GET", day_path(day)), BOOKINGS)):
+        raise BcsError("Booking still present after saving")
+    span = "{}:{}-{}:{}".format(f.get("effortStart_hour", ""), f.get("effortStart_minute", ""),
+                                f.get("effortEnd_hour", ""), f.get("effortEnd_minute", ""))
+    print(f"{color('1;32', 'Removed', sys.stdout)} {color('32', span, sys.stdout)}"
+          f" on {day:%a %Y-%m-%d} from {task_name(name)}")
+
+
+CLOSURE_PATH = "/bcs/mybcs/usertimerecordingclosure/display"
+CLOSURE_TOOL = "lasttestation,userTimeRecordingClosureDate,performTimeRecordingClosure"
+CLOSURE_DIALOG = CLOSURE_TOOL + ",performUserTimeRecordingClosure"
+
+
+def ajax(session, path, pairs):
+    """Sends a request the way the page's AJAX calls do and returns the html of the response."""
+    body = urllib.parse.urlencode(pairs, quote_via=urllib.parse.quote).encode()
+    response = session.request("POST", path, body, {
+        "Accept": "*/*",
+        "Upgrade-Insecure-Requests": None,
+        "Content-type": "application/x-www-form-urlencoded",
+        "X-CSRF-Token": session.cookies.get("CSRF_Token", ""),
+        "Origin": f"http://{HOST}:{PORT}",
+    })
+    try:
+        return json.loads(response).get("html", "")
+    except ValueError:
+        raise BcsError("Unexpected response from the closure dialog") from None
+
+
+def closure_page(session):
+    page = session.request("GET", CLOSURE_PATH)
+    if CLOSURE_TOOL not in page:
+        login(session)
+        page = session.request("GET", CLOSURE_PATH)
+        if CLOSURE_TOOL not in page:
+            raise BcsError("Login failed")
+    return page
+
+
+def closure_date(page):
+    text = html.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", page, flags=re.S)))
+    m = re.search(r"Booking closure\s+\w{3} (\d{2})/(\d{2})/(\d{2})\s+Execute now", text)
+    if not m:
+        raise BcsError("Cannot read the current booking closure date")
+    return datetime.date(2000 + int(m.group(3)), int(m.group(1)), int(m.group(2)))
+
+
+def dialog_fields(dialog):
+    """Returns the fields of the closure dialog in document order, the OK button included like a submitter."""
+    fields = []
+    for m in re.finditer(r"<(input|button)\b[^>]*>", dialog):
+        tag = m.group(0)
+        name = re.search(r'\sname="([^"]*)"', tag)
+        value = re.search(r'\svalue="([^"]*)"', tag)
+        kind = re.search(r'\stype="([^"]*)"', tag)
+        if not name or not name.group(1).startswith(CLOSURE_TOOL):
+            continue
+        kind = kind.group(1) if kind else "text"
+        if kind == "button" or (kind == "submit" and name.group(1) != CLOSURE_DIALOG):
+            continue
+        fields.append([html.unescape(name.group(1)), html.unescape(value.group(1)) if value else "", kind])
+    return fields
+
+
+def close(session, day, dry_run):
+    page = closure_page(session)
+    current = closure_date(page)
+    if day <= current:
+        raise BcsError(f"Bookings are already closed up to {current:%a %Y-%m-%d}")
+
+    # open the dialog and set the date like the browser does, neither of these closes anything
+    common = [("bcs_ajax_type", "2"), ("bcs_ajax_component", CLOSURE_TOOL), ("oid", page_oid(page))]
+    ajax(session, CLOSURE_PATH, common + [
+        ("bcs_ajax_additional_param,toolLabel", "Execute now ..."),
+        ("bcs_ajax_additional_param,loadEverytime", "true"),
+        ("bcs_ajax_additional_param,parentComponentNamePath", "lasttestation"),
+        ("bcs_ajax_additional_param,selectionOids", ""),
+    ])
+    inputs = f"{CLOSURE_DIALOG},Dialog,input,"
+    values = {
+        f"{inputs}closeEfforts,closeEfforts": "closeEffortsOfDate",
+        f"{inputs}closeEffortsDate,closeEffortsDate": day.strftime("%m/%d/%Y"),
+    }
+    dialog_state = [
+        (f"{inputs}closeEfforts,closeEfforts", "closeEffortsOfDate"),
+        (f"{inputs}closeEffortsDate,closeEffortsDate", day.strftime("%m/%d/%Y")),
+        (f"{inputs}oid", "NEW_CREATED_OBJECT"),
+        (f"{inputs}Data_SuppressLastHorizontalLine", "false"),
+        (f"{inputs}edit_form_data_submitted", "true"),
+        (f"{CLOSURE_TOOL},toolDialogSubmitted", "true"),
+    ]
+    dialog = ajax(session, CLOSURE_PATH, dialog_state + common + [
+        ("bcs_ajax_additional_param,changedAttributes", "closeEffortsDate"),
+        ("bcs_ajax_additional_param,parentComponentNamePath", "lasttestation"),
+        ("bcs_ajax_additional_param,selectionOids", ""),
+    ])
+    buttons = re.findall(r'data-click-domevents="([^"]*tooldialog\.click\.submit[^"]*)"', dialog)
+    if not buttons:
+        raise BcsError("The closure dialog has no OK button")
+    submit = json.loads(html.unescape(buttons[0]))[0]
+
+    fields = []
+    for name, value, kind in dialog_fields(dialog):
+        if kind == "radio":
+            if value != values[name]:
+                continue
+        elif name in values:
+            value = values[name]
+        fields.append([name, value])
+    if [n for n, _ in fields].count(f"{inputs}closeEffortsDate,closeEffortsDate") != 1 or \
+            dict(fields).get(f"{inputs}closeEfforts,closeEfforts") != "closeEffortsOfDate":
+        raise BcsError("The closure dialog does not offer a special closure date")
+
+    form = Form()
+    form.feed(page)
+    pairs = form.pairs + fields + [
+        [submit["actionParameter"], "100"],
+        ["executedtoolpath", submit["toolPath"]],
+        ["executedtool", submit["toolname"]],
+        ["triggerdefaultaction", submit["defaultActionComponentNamePath"]],
+        ["toolDialogId", submit["id"]],
+        ["CSRF_Token", session.cookies.get("CSRF_Token", "")],
+    ]
+
+    if dry_run:
+        print(f"POST {CLOSURE_PATH}")
+        for name, value in pairs:
+            print(f"  {name} = {value}")
+        return
+
+    print(f"Bookings are closed up to {current:%a %Y-%m-%d}.")
+    print(color("1;31", f"Closing all bookings up to {day:%a %Y-%m-%d} cannot be undone.", sys.stdout))
+    try:
+        with open("/dev/tty") as tty:
+            print(f"Type {day:%Y-%m-%d} to confirm: ", end="", flush=True)
+            answer = tty.readline().strip()
+    except OSError:
+        raise BcsError("Confirmation needs a terminal") from None
+    if answer != day.isoformat():
+        raise BcsError("Not confirmed, nothing was closed")
+
+    session.post(CLOSURE_PATH, pairs)
+
+    closed = closure_date(session.request("GET", CLOSURE_PATH))
+    if closed != day:
+        raise BcsError(f"BCS shows the booking closure at {closed:%a %Y-%m-%d} after submitting")
+    print(f"{color('1;32', 'Closed', sys.stdout)} bookings up to {day:%a %Y-%m-%d}")
+
+
+def page_oid(page):
+    m = re.search(r'<input name="oid" type="hidden" value="([^"]+)"', page)
+    if not m:
+        raise BcsError("Cannot read the user of the page")
+    return m.group(1)
+
+
+def reachable():
+    try:
+        socket.create_connection((HOST, PORT), timeout=3).close()
+        return True
+    except OSError:
+        return False
+
+
+def vpn(action):
+    return subprocess.run(["bash", "-c", VPN_SHELL, "bash", action], stdout=subprocess.DEVNULL, check=False).returncode
+
+
+def connect():
+    """Returns True when this run connected the VPN and has to disconnect it."""
+    if reachable():
+        return False
+    status = vpn("connect")
+    if status == 127:
+        raise BcsError(f"{HOST} is unreachable and no vpn command is available")
+    if status != 0:
+        raise BcsError("VPN connection failed")
+    for _ in range(10):
+        if reachable():
+            return True
+        time.sleep(1)
+    vpn("disconnect")
+    raise BcsError(f"{HOST} is unreachable over the VPN")
+
+
+def parse_date(text):
+    today = datetime.date.today()
+    if text == "today":
+        return today
+    if text == "yesterday":
+        return today - datetime.timedelta(days=1)
+    try:
+        return datetime.date.fromisoformat(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid date {text}, expected YYYY-MM-DD, today or yesterday") from None
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Book time on BCS.")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("-d", "--date", type=parse_date, default=datetime.date.today(),
+                        help="YYYY-MM-DD, today or yesterday (default today)")
+    commands = parser.add_subparsers(dest="command", required=True)
+    listing = commands.add_parser("list", parents=[common], help="list tasks and bookings of a day")
+    listing.add_argument("-w", "--week", action="store_true", help="list the bookings of the whole week")
+    booking = commands.add_parser("book", parents=[common], help="book a time range on a task")
+    booking.add_argument("task", help="task OID or a unique part of its name")
+    booking.add_argument("start", help="HH:MM")
+    booking.add_argument("end", help="HH:MM")
+    booking.add_argument("description", nargs="?", default="")
+    removal = commands.add_parser("remove", parents=[common], help="remove the booking starting at a time")
+    removal.add_argument("start", help="HH:MM the booking starts at")
+    removal.add_argument("task", nargs="?", default="", help="task OID or part of its name, when several bookings start then")
+    closing = commands.add_parser("close", help="set the booking closure to a special closure date")
+    closing.add_argument("date", type=parse_date, help="last day to close, YYYY-MM-DD, today or yesterday")
+    closing.add_argument("-n", "--dry-run", action="store_true", help="print the closing request instead of sending it")
+    args = parser.parse_args()
+
+    disconnect = False
+    try:
+        disconnect = connect()
+        session = Session(CACHE / "session.json")
+        if args.command == "list":
+            if args.week:
+                list_week(session, args.date)
+            else:
+                list_day(session, args.date)
+        elif args.command == "book":
+            book(session, args.date, args.task, args.start, args.end, args.description)
+        elif args.command == "remove":
+            remove(session, args.date, args.start, args.task)
+        else:
+            close(session, args.date, args.dry_run)
+        if args.command in ("list", "book", "remove") and args.date != datetime.date.today() \
+                and not getattr(args, "week", False):
+            # BCS keeps the selected day in the session, switch it back to today
+            session.request("GET", day_path(datetime.date.today()))
+    except (BcsError, OSError, http.client.HTTPException) as e:
+        print(color("1;31", e, sys.stderr), file=sys.stderr)
+        return 1
+    finally:
+        if disconnect:
+            vpn("disconnect")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
