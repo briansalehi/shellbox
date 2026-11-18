@@ -309,7 +309,17 @@ local function toggle_observe()
         local consume = opts.on_spawn
         opts.on_spawn = function()
             consume()
+            local term = vim.api.nvim_get_current_win()
+            local width = vim.api.nvim_win_get_width(term)
             vim.api.nvim_set_current_win(win)
+            -- leaving at once keeps the pty at the wrong width until a resize
+            -- comes, so make one
+            vim.api.nvim_win_set_width(term, width - 1)
+            vim.api.nvim_win_set_width(term, width)
+            -- an unfocused terminal follows output only while its cursor is on
+            -- the last line
+            vim.api.nvim_win_set_cursor(term,
+                { vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(term)), 0 })
         end
         agents.pick_model('review', opts)
     end)
