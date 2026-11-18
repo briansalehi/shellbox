@@ -8,6 +8,9 @@
 -- claude is working: an Enter landing on a permission prompt could answer it.
 -- Claude's hooks report its state through scripts/agent-state.lua, and anything
 -- saved in the meantime is held and sent together once claude is idle.
+--
+-- The instructions go with the first diff a session gets, and again after
+-- /clear, a resume or a compaction, which may have lost them.
 
 local agents = require('agents')
 
@@ -20,8 +23,8 @@ local MAX_FILE_BYTES = 1024 * 1024
 local MAX_DIFF_LINES = 500
 
 local INSTRUCTIONS = table.concat({
-    'You are pair programming with me and I just saved the change above.',
-    'Judge this change only, using what you already know from earlier saves, and do not repeat earlier comments.',
+    'You are pair programming with me. Each message that starts with "Saved:" is the diff of a change I just saved.',
+    'Judge each change only, using what you already know from earlier saves, and do not repeat earlier comments.',
     'If there is nothing worth raising, reply with exactly: looks good.',
     'Otherwise comment briefly and propose edits as diff hunks.',
     'Only run a tool if the change cannot be judged without it.',
@@ -32,6 +35,7 @@ local pending  = {}   -- root -> path -> { old, new }
 local states   = {}   -- root -> { value = 'idle' | 'busy', job }
 local awaiting = {}   -- root -> a reply to the observer is due
 local timers   = {}   -- root -> generation of the latest debounce timer
+local briefed  = {}   -- root -> job of the session that has the instructions
 
 local function read_file(path)
     local f = io.open(path, 'rb')
@@ -46,7 +50,7 @@ local function sanitize(text)
     return (text:gsub('[%z\1-\8\11-\31\127]', ''))
 end
 
-local function build_message(root)
+local function build_message(root, brief)
     local parts, total = {}, 0
     local paths = vim.tbl_keys(pending[root] or {})
     table.sort(paths)
@@ -67,7 +71,8 @@ local function build_message(root)
         end
     end
     if #parts == 0 then return nil end
-    return 'Saved:\n' .. table.concat(parts, '\n') .. '\n' .. INSTRUCTIONS
+    local message = 'Saved:\n' .. table.concat(parts, '\n')
+    return brief and message .. '\n' .. INSTRUCTIONS or message
 end
 
 local function flush(root)
@@ -78,9 +83,10 @@ local function flush(root)
     -- you are typing in the reviewer: TermLeave tries again
     if vim.api.nvim_get_current_buf() == s.buf and vim.fn.mode():sub(1, 1) == 't' then return end
 
-    local message = build_message(root)
+    local message = build_message(root, briefed[root] ~= s.job)
     pending[root] = nil
     if not message then return end
+    briefed[root] = s.job
 
     state.value = 'busy'   -- until the hooks say otherwise, so nothing sends twice
     awaiting[root] = true
@@ -101,10 +107,13 @@ local function report(root, message)
         vim.log.levels.WARN)
 end
 
--- Called over RPC by scripts/agent-state.lua. event is 'idle', 'busy' or 'stop';
--- only 'stop' ends a turn and carries the reply.
+-- Called over RPC by scripts/agent-state.lua. event is 'start', 'idle', 'busy',
+-- 'stop' or 'compact'; only 'stop' ends a turn and carries the reply.
 function M.on_state(name, root, event, message)
     if name ~= AGENT then return end
+    if event == 'start' or event == 'compact' then briefed[root] = nil end
+    -- a compaction can happen in the middle of a turn, so it says nothing about state
+    if event == 'compact' then return end
     local s = agents.session(AGENT, root)
     states[root] = { value = event == 'busy' and 'busy' or 'idle', job = s and s.job }
     if event == 'busy' then return end
@@ -128,8 +137,10 @@ function M.hook_settings()
         } }
     end
     return vim.json.encode({ hooks = {
-        -- not 'compact': that one fires in the middle of a turn
-        SessionStart     = hook('idle', 'startup|resume|clear'),
+        SessionStart     = {
+            hook('start', 'startup|resume|clear')[1],
+            hook('compact', 'compact')[1],
+        },
         UserPromptSubmit = hook('busy'),
         PreToolUse       = hook('busy'),
         Stop             = hook('stop'),

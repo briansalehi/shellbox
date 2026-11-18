@@ -291,7 +291,9 @@ you in your buffer. Nothing polls: each `:w` starts a 2-second timer, so a burst
 saves becomes one message holding that batch's diff, and a save with no change sends
 nothing. The reviewer comments only, proposes edits as diff hunks and replies
 `looks good` when there is nothing to raise; if its window is hidden, anything else
-raises a notification. The message is typed into its terminal, and an Enter landing
+raises a notification. Those instructions go with the first diff of a session
+and again after `/clear`, a resume or a compaction, so later saves send only the
+diff. The message is typed into its terminal, and an Enter landing
 on a permission prompt could answer it, so claude hooks passed through `--settings`
 report its state via `scripts/agent-state.lua`, and saves are held while it is
 working or while you are typing in its terminal. An unsent draft left in its prompt
