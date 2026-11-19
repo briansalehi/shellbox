@@ -200,7 +200,7 @@ local function build_argv(agent, extra)
     return argv
 end
 
-local function spawn(agent, root, extra)
+local function spawn(agent, root, extra, env)
     if vim.fn.executable(agent.cmd) ~= 1 then
         vim.notify(("agents: '%s' is not in PATH"):format(agent.cmd), vim.log.levels.ERROR)
         return nil
@@ -217,7 +217,7 @@ local function spawn(agent, root, extra)
         term    = true,
         cwd     = vim.fn.isdirectory(root) == 1 and root or nil,
         -- how a hook script running inside the agent names this session
-        env     = vim.tbl_extend('force', agent.env or {},
+        env     = vim.tbl_extend('force', agent.env or {}, env or {},
             { AGENT_NAME = agent.name, AGENT_ROOT = root }),
         on_exit = function(id, code) M._on_exit(id, code) end,
     })
@@ -304,7 +304,7 @@ local function launch(agent, opts)
     end
 
     sessions[key] = nil
-    local spawned = spawn(agent, root, resolve_args(agent, opts))
+    local spawned = spawn(agent, root, resolve_args(agent, opts), opts.env)
     if spawned and opts.on_spawn then opts.on_spawn() end
     return spawned
 end
@@ -443,7 +443,9 @@ function M.pick_model(name, opts)
         local args = {}
         vim.list_extend(args, opts.args or {})
         vim.list_extend(args, item.args or {})
-        M.focus(agent.name, { variant = opts.variant, args = args, on_spawn = opts.on_spawn })
+        -- a model can also carry env of its own, over the agent's
+        M.focus(agent.name, { variant = opts.variant, args = args, env = item.env,
+            on_spawn = opts.on_spawn })
     end
 
     if #items == 1 then return go(items[1]) end

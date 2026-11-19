@@ -157,32 +157,46 @@ end
 -- one rather than adding to it, and it takes the place of any model-paired prompt
 -- from ~/.config/opencode/agent. edit covers every file-writing tool and task is
 -- the subagent route; bash asks, as claude does, and the prompt rules out writes.
-local function opencode_role(prompt, options)
+local function opencode_role(prompt)
     return {
         mode = 'primary',
         description = 'read-only, set up by nvim',
         prompt = prompt,
         permission = { edit = 'deny', task = 'deny', bash = 'ask' },
-        options = options,
     }
 end
 
-local opencode_readonly_config = vim.json.encode({
+local opencode_readonly = {
     agent = {
         observer = opencode_role(review_prompt),
-        -- Judging whether code is right needs reasoning, so the mentor turns
-        -- thinking on even for a model whose config turns it off. Agent options
-        -- are merged over the model's options; other providers ignore the key.
-        mentor   = opencode_role(review_prompt .. ' ' .. mentor_prompt, { think = true }),
+        mentor   = opencode_role(review_prompt .. ' ' .. mentor_prompt),
     },
     plugin = { 'file://' .. vim.fn.stdpath('config') .. '/scripts/agent-state.ts' },
-})
+}
+local opencode_readonly_config = vim.json.encode(opencode_readonly)
+
+-- Judging whether code is right needs reasoning, so with an ollama model the
+-- mentor turns thinking on, even where the model's config turns it off. It is set
+-- on that one model rather than on the agent, because agent options reach every
+-- provider and a hosted one rejects a `think` argument it does not know.
+local function opencode_thinking_config(model)
+    local id = model:match('^ollama/(.+)$')
+    if not id then return nil end
+    return vim.json.encode(vim.tbl_extend('force', opencode_readonly, {
+        provider = { ollama = { models = { [id] = { options = { think = true } } } } },
+    }))
+end
 
 local function opencode_readonly_models(role)
     return function()
         local out = {}
         for _, model in ipairs(opencode_model_names()) do
-            table.insert(out, { label = model, args = { '--model', model, '--agent', role } })
+            local thinking = role == 'mentor' and opencode_thinking_config(model)
+            table.insert(out, {
+                label = model,
+                args  = { '--model', model, '--agent', role },
+                env   = thinking and { OPENCODE_CONFIG_CONTENT = thinking } or nil,
+            })
         end
         return out
     end
@@ -223,10 +237,22 @@ end
 -- opencode splits $VISUAL on spaces and runs it without a shell
 local opencode_visual = 'nvim --clean -l ' .. vim.fn.stdpath('config') .. '/scripts/remote-edit.lua'
 
--- full-screen TUI: no scrollback in the buffer, so page opencode itself
+-- Full-screen TUI: no scrollback in the buffer, so normal-mode scrolling is sent
+-- to opencode as its own message-scrolling keys. ESC before a control character
+-- is how a terminal sends ctrl+alt.
 local opencode_keys = {
-    ['<C-u>'] = '\27[5~',   -- PageUp
-    ['<C-d>'] = '\27[6~',   -- PageDown
+    ['j']             = '\27\5',              -- ctrl+alt+e  line down
+    ['k']             = '\27\25',             -- ctrl+alt+y  line up
+    ['<C-e>']         = '\27\5',
+    ['<C-y>']         = '\27\25',
+    ['<C-d>']         = '\27\4',              -- ctrl+alt+d  half page down
+    ['<C-u>']         = '\27\21',             -- ctrl+alt+u  half page up
+    ['<C-f>']         = '\27[6~',             -- PageDown
+    ['<C-b>']         = '\27[5~',             -- PageUp
+    ['gg']            = '\7',                 -- ctrl+g      first message
+    ['G']             = '\27\7',              -- ctrl+alt+g  last message
+    ['<ScrollWheelDown>'] = ('\27\5'):rep(3),
+    ['<ScrollWheelUp>']   = ('\27\25'):rep(3),
 }
 
 -- Write puts bytes on disk exactly like Edit, and a subagent has its own tool

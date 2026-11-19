@@ -326,8 +326,10 @@ launch only, to add two agents, `mentor` and `observer`, and the plugin
 `scripts/agent-state.ts`. So nothing is installed under `~/.config/opencode` and
 other opencode sessions never load them. The agents deny `edit`, which covers every
 file-writing tool, and `task`, ask before each `bash` command, and carry the same
-read-only and role prompts as claude's. The mentor also sets `think: true`, which overrides a model config that turns
-thinking off, such as `qwen3:8b` in `~/.config/opencode/opencode.jsonc`. An opencode agent's prompt replaces
+read-only and role prompts as claude's. With an ollama model the mentor also sets `think: true` on that model, which
+overrides a config that turns thinking off, such as `qwen3:8b` in
+`~/.config/opencode/opencode.jsonc`. Hosted models do not get it, because they reject
+an argument they do not know. An opencode agent's prompt replaces
 opencode's default prompt rather than adding to it, and a model-paired prompt from
 `~/.config/opencode/agent` is not used. The plugin reports `start`, `busy`, `stop`
 with the last reply, and `compact` through `scripts/agent-state.lua`, as claude's
@@ -339,9 +341,11 @@ position. `<C-h/j/k/l>` leave the terminal with the view frozen where it is, whi
 `<M-h/j/k/l>` first move to the last line, so the unfocused window follows the output.
 
 Opencode is a full-screen app on the terminal's alternate screen, so its buffer
-holds only the visible screen and no scrollback. In its normal mode `<C-u>`/`<C-d>`
-send `PageUp`/`PageDown` to opencode, which then pages its own history; visual
-select and yank work on whatever is on screen. For the whole transcript, opencode's
+holds only the visible screen and no scrollback. In its normal mode the usual scroll
+keys are sent to opencode as its own message-scrolling keys, so it scrolls its own
+history: `j`/`k` and `<C-e>`/`<C-y>` a line, `<C-d>`/`<C-u>` half a page,
+`<C-f>`/`<C-b>` a page, `gg`/`G` the first and last message, and the mouse wheel
+three lines. Visual select, yank and `/` work only on what is on screen. For the whole transcript, opencode's
 export (`ctrl+x x`) and prompt editor (`ctrl+x e`) run `$VISUAL`, which the agent
 sets to `scripts/remote-edit.lua`: the file opens in a new tab of this nvim, and
 opencode resumes once that buffer is closed.
