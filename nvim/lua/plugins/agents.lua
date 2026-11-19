@@ -54,18 +54,43 @@ local review_prompt = table.concat({
     'If I want an edit made, I restart the session with a writing agent.',
 }, ' ')
 
+-- Mentor mode: I do not know how to do something yet and want to write it myself.
+-- Its saves reach it through lua/agent-observer.lua, which sends no instructions
+-- of its own for this agent, so the whole role lives here.
+local mentor_prompt = table.concat({
+    'You are my mentor. I write every line myself; you teach me how, one small step at a time.',
+    'When I state a goal, read what you need, then reply with the plan as a numbered list of steps, one line each,',
+    'each step a change I can write and save in a few minutes.',
+    'Then present only step 1: what to change, where, and why, with a diff block as the reference.',
+    'Each message that starts with "Saved:" is the diff of what I just saved.',
+    'If a save arrives before I have stated a goal, do not ask me for one: read whatever files you need to work out what I am doing,',
+    'say in one line what you guessed, then make the plan for that goal and judge the save against it as below.',
+    'Judge every save before you decide anything. First restate what the current step requires.',
+    'Then go through my diff line by line against it and against the code around it, and name each mistake:',
+    'wrong logic, wrong names or types, missing pieces, anything that will not compile or run.',
+    'A step is done only if every part it requires is present and correct; looking roughly similar is not done.',
+    'If the step is incomplete or wrong, explain why and show the correction, and stay on that step.',
+    'If it is done, mention anything worth improving in what I wrote, then present the next step the same way.',
+    'End every reply to a save with one line, and only then: "Step N done" or "Step N: <what is missing or wrong>".',
+    'If what I wrote works but differs from your plan, adapt the remaining steps to it.',
+    'Do not repeat earlier comments.',
+    'After the last step, reply "Goal done" and summarize what was built.',
+}, ' ')
+
 -- claude refuses --append-system-prompt together with --append-system-prompt-file,
--- so the model's prompt file is inlined and the review rules appended to its text.
-local function claude_review_models()
-    local out = {}
-    for _, p in ipairs(claude_prompts()) do
-        local prompt = table.concat(vim.fn.readfile(p.file), '\n') .. '\n\n' .. review_prompt
-        table.insert(out, {
-            label = p.model,
-            args  = { '--model', p.model, '--append-system-prompt', prompt },
-        })
+-- so the model's prompt file is inlined and the given rules appended to its text.
+local function claude_readonly_models(rules)
+    return function()
+        local out = {}
+        for _, p in ipairs(claude_prompts()) do
+            local prompt = table.concat(vim.fn.readfile(p.file), '\n') .. '\n\n' .. rules
+            table.insert(out, {
+                label = p.model,
+                args  = { '--model', p.model, '--append-system-prompt', prompt },
+            })
+        end
+        return out
     end
-    return out
 end
 
 -- opencode has no system-prompt flag. Its prompts live in agent definitions at
@@ -95,7 +120,7 @@ end
 -- per nvim session; a failed run is not cached.
 local model_cache = nil
 
-local function opencode_models()
+local function opencode_model_names()
     if not model_cache then
         if vim.fn.executable('opencode') ~= 1 then return {} end
         local lines = vim.fn.systemlist({ 'opencode', 'models' })
@@ -103,23 +128,64 @@ local function opencode_models()
             vim.notify('agents: `opencode models` failed', vim.log.levels.ERROR)
             return {}
         end
-        model_cache = lines
-    end
-
-    local prompts = opencode_prompts()
-    local out = {}
-    for _, line in ipairs(model_cache) do
-        local model = vim.trim(line)
-        if model ~= '' then
-            local prompt = prompts[model]
-            table.insert(out, {
-                label = prompt and ('%s  [%s]'):format(model, prompt) or model,
-                args  = prompt and { '--model', model, '--agent', prompt }
-                                or { '--model', model },
-            })
+        model_cache = {}
+        for _, line in ipairs(lines) do
+            local model = vim.trim(line)
+            if model ~= '' then table.insert(model_cache, model) end
         end
     end
+    return model_cache
+end
+
+local function opencode_models()
+    local prompts = opencode_prompts()
+    local out = {}
+    for _, model in ipairs(opencode_model_names()) do
+        local prompt = prompts[model]
+        table.insert(out, {
+            label = prompt and ('%s  [%s]'):format(model, prompt) or model,
+            args  = prompt and { '--model', model, '--agent', prompt }
+                            or { '--model', model },
+        })
+    end
     return out
+end
+
+-- The read-only opencode agents. OPENCODE_CONFIG_CONTENT is merged over the user's
+-- config for this launch only, so the role agents and the state plugin exist in
+-- these sessions and nowhere else. An agent's prompt replaces opencode's default
+-- one rather than adding to it, and it takes the place of any model-paired prompt
+-- from ~/.config/opencode/agent. edit covers every file-writing tool and task is
+-- the subagent route; bash asks, as claude does, and the prompt rules out writes.
+local function opencode_role(prompt, options)
+    return {
+        mode = 'primary',
+        description = 'read-only, set up by nvim',
+        prompt = prompt,
+        permission = { edit = 'deny', task = 'deny', bash = 'ask' },
+        options = options,
+    }
+end
+
+local opencode_readonly_config = vim.json.encode({
+    agent = {
+        observer = opencode_role(review_prompt),
+        -- Judging whether code is right needs reasoning, so the mentor turns
+        -- thinking on even for a model whose config turns it off. Agent options
+        -- are merged over the model's options; other providers ignore the key.
+        mentor   = opencode_role(review_prompt .. ' ' .. mentor_prompt, { think = true }),
+    },
+    plugin = { 'file://' .. vim.fn.stdpath('config') .. '/scripts/agent-state.ts' },
+})
+
+local function opencode_readonly_models(role)
+    return function()
+        local out = {}
+        for _, model in ipairs(opencode_model_names()) do
+            table.insert(out, { label = model, args = { '--model', model, '--agent', role } })
+        end
+        return out
+    end
 end
 
 -- cursor takes its instructions from .cursor/rules and AGENTS.md, so there is no
@@ -154,6 +220,22 @@ local function cursor_models()
     return out
 end
 
+-- opencode splits $VISUAL on spaces and runs it without a shell
+local opencode_visual = 'nvim --clean -l ' .. vim.fn.stdpath('config') .. '/scripts/remote-edit.lua'
+
+-- full-screen TUI: no scrollback in the buffer, so page opencode itself
+local opencode_keys = {
+    ['<C-u>'] = '\27[5~',   -- PageUp
+    ['<C-d>'] = '\27[6~',   -- PageDown
+}
+
+-- Write puts bytes on disk exactly like Edit, and a subagent has its own tool
+-- set, so Agent is an edit delegated one level down. The hooks are how
+-- lua/agent-observer.lua knows it is safe to type into the session.
+-- --disallowedTools takes every word after it, so it has to stay last.
+local readonly_args = { '--chrome', '--settings', observer.hook_settings(),
+                        '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Agent' }
+
 agents.setup({
     window = { orientation = 'vertical', width_ratio = 0.25, split_ratio = 0.50 },
     agents = {
@@ -168,28 +250,39 @@ agents.setup({
         {
             name = 'review',
             cmd = 'claude',
-            -- Write puts bytes on disk exactly like Edit, and a subagent has its
-            -- own tool set, so Agent is an edit delegated one level down
-            -- The hooks are how the observer knows it is safe to type into this session.
-            -- --disallowedTools takes every word after it, so it has to stay last.
-            args = { '--chrome', '--settings', observer.hook_settings(),
-                     '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Agent' },
-            models = claude_review_models,
+            args = readonly_args,
+            models = claude_readonly_models(review_prompt),
+        },
+        -- the same read-only claude with the mentor role on top; a separate agent
+        -- so the observer and the mentor never share a system prompt
+        {
+            name = 'mentor',
+            cmd = 'claude',
+            args = readonly_args,
+            models = claude_readonly_models(review_prompt .. ' ' .. mentor_prompt),
         },
         {
             name = 'opencode',
             cmd = 'opencode',
-            -- opencode splits $VISUAL on spaces and runs it without a shell
-            env = {
-                VISUAL = 'nvim --clean -l '
-                    .. vim.fn.stdpath('config') .. '/scripts/remote-edit.lua',
-            },
-            -- full-screen TUI: no scrollback in the buffer, so page opencode itself
-            normal_keys = {
-                ['<C-u>'] = '\27[5~',   -- PageUp
-                ['<C-d>'] = '\27[6~',   -- PageDown
-            },
+            env = { VISUAL = opencode_visual },
+            normal_keys = opencode_keys,
             models = opencode_models,
+        },
+        -- opencode's observer and mentor, separate agents for the same reasons
+        -- as claude's review and mentor
+        {
+            name = 'oc-review',
+            cmd = 'opencode',
+            env = { VISUAL = opencode_visual, OPENCODE_CONFIG_CONTENT = opencode_readonly_config },
+            normal_keys = opencode_keys,
+            models = opencode_readonly_models('observer'),
+        },
+        {
+            name = 'oc-mentor',
+            cmd = 'opencode',
+            env = { VISUAL = opencode_visual, OPENCODE_CONFIG_CONTENT = opencode_readonly_config },
+            normal_keys = opencode_keys,
+            models = opencode_readonly_models('mentor'),
         },
         {
             name = 'cursor',
@@ -203,7 +296,8 @@ agents.setup({
 -- every family: l launch, p picker, o observe, c continue. Modifier toggles (continue /
 -- verbose / yolo) are per family and only bound where the CLI supports them; they
 -- compose into the next launch. Continue and yolo switch off once a launch has used
--- them, verbose stays on. Observe only works for claude so far, see lua/agent-observer.lua.
+-- them, verbose stays on. Observe and mentor work for claude and opencode, see
+-- lua/agent-observer.lua.
 local families = {
     claude = {
         mods = {
@@ -262,6 +356,9 @@ end
 local launch_specs = {
     claude   = { family = 'claude', base = claude_default_args },
     review   = { family = 'claude', skip = { yolo = true }, picker = true },
+    mentor   = { family = 'claude', skip = { yolo = true }, picker = true },
+    ['oc-review'] = { family = 'opencode', picker = true },
+    ['oc-mentor'] = { family = 'opencode', picker = true },
     opencode = { family = 'opencode' },
     cursor   = { family = 'cursor' },
 }
@@ -301,28 +398,45 @@ local function launch_picker(agent_name)
     return function() agents.pick_model(agent_name, launch_opts(agent_name)) end
 end
 
--- Observing starts the reviewer if needed, without taking you out of your buffer.
-local function toggle_observe()
-    observer.toggle(function()
-        local win = vim.api.nvim_get_current_win()
-        local opts = launch_opts('review')
-        local consume = opts.on_spawn
-        opts.on_spawn = function()
-            consume()
-            local term = vim.api.nvim_get_current_win()
-            local width = vim.api.nvim_win_get_width(term)
-            vim.api.nvim_set_current_win(win)
-            -- leaving at once keeps the pty at the wrong width until a resize
-            -- comes, so make one
-            vim.api.nvim_win_set_width(term, width - 1)
-            vim.api.nvim_win_set_width(term, width)
-            -- an unfocused terminal follows output only while its cursor is on
-            -- the last line
-            vim.api.nvim_win_set_cursor(term,
-                { vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(term)), 0 })
+-- Launch options that start the agent without taking you out of your buffer.
+local function background_opts(name)
+    local win = vim.api.nvim_get_current_win()
+    local opts = launch_opts(name)
+    local consume = opts.on_spawn
+    opts.on_spawn = function()
+        consume()
+        local term = vim.api.nvim_get_current_win()
+        local width = vim.api.nvim_win_get_width(term)
+        vim.api.nvim_set_current_win(win)
+        -- leaving at once keeps the pty at the wrong width until a resize
+        -- comes, so make one
+        vim.api.nvim_win_set_width(term, width - 1)
+        vim.api.nvim_win_set_width(term, width)
+        -- an unfocused terminal follows output only while its cursor is on
+        -- the last line
+        vim.api.nvim_win_set_cursor(term,
+            { vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(term)), 0 })
+    end
+    return opts
+end
+
+-- Observing starts the agent if needed, in the background.
+local function toggle_observe(name)
+    return function() observer.toggle(name, function()
+        agents.pick_model(name, background_opts(name))
+    end) end
+end
+
+-- The mentor takes every save for as long as it runs, so there is nothing to
+-- switch on: the key starts it in the background, then shows or hides it.
+local function toggle_mentor(name)
+    return function()
+        if agents.session(name, agents.project_root()) then
+            agents.toggle(name)
+        else
+            agents.pick_model(name, background_opts(name))
         end
-        agents.pick_model('review', opts)
-    end)
+    end
 end
 
 -- what <leader>ap runs for an agent that is not running yet
@@ -334,19 +448,20 @@ local function start_from_pick(agent_name)
     end
 end
 
--- claude: opus / picker / review / observe + continue, verbose, yolo
+-- claude: opus / picker / mentor / observe + continue, verbose, yolo
 map('<leader>acl', launch('claude'),                        'Agent: claude')
 map('<leader>acp', launch_picker('claude'),                 'Agent: claude model')
-map('<leader>acd', launch_picker('review'),                 'Agent: claude review (no edits)')
-map('<leader>aco', toggle_observe,                          'Agent: claude observe (pair on save)')
+map('<leader>acm', toggle_mentor('mentor'),                 'Agent: claude mentor (guides on save)')
+map('<leader>aco', toggle_observe('review'),                'Agent: claude observe (pair on save)')
 map('<leader>acc', toggle_mod('claude', 'continue'),        'Agent: claude continue')
 map('<leader>acv', toggle_mod('claude', 'verbose'),         'Agent: claude verbose')
 map('<leader>acy', toggle_mod('claude', 'yolo'),            'Agent: claude yolo')
 
--- opencode: bare / picker / observe + continue (no verbose, no yolo)
+-- opencode: bare / picker / mentor / observe + continue (no verbose, no yolo)
 map('<leader>aol', launch('opencode'),                      'Agent: opencode')
 map('<leader>aop', launch_picker('opencode'),               'Agent: opencode model')
-map('<leader>aoo', observe_unsupported('opencode'),         'Agent: opencode observe')
+map('<leader>aom', toggle_mentor('oc-mentor'),              'Agent: opencode mentor (guides on save)')
+map('<leader>aoo', toggle_observe('oc-review'),             'Agent: opencode observe (pair on save)')
 map('<leader>aoc', toggle_mod('opencode', 'continue'),      'Agent: opencode continue')
 
 -- cursor: bare / picker / observe + continue, yolo (no verbose)

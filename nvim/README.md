@@ -242,12 +242,13 @@ ignored and the toggle stays on. Notify reports on/off.
 | --- | --- |
 | `\acl` | claude on opus with its prompt, falling back to claude's default model without `opus.md` |
 | `\acp` | claude model picker |
-| `\acd` | claude reviewer (no edits; model picker) |
-| `\aco` | pair programming on save, on / off |
+| `\acm` | claude mentor: guides you step by step on save (no edits; model picker), then show / hide |
+| `\aco` | claude observer: pair programming on save, on / off |
 | `\acc` / `\acv` / `\acy` | claude continue / verbose / yolo toggles |
 | `\aol` | opencode bare |
 | `\aop` | opencode model picker |
-| `\aoo` | opencode observe, not available yet |
+| `\aom` | opencode mentor, as `\acm` |
+| `\aoo` | opencode observer, as `\aco` |
 | `\aoc` | opencode continue toggle |
 | `\aul` | cursor bare |
 | `\aup` | cursor model picker |
@@ -263,14 +264,14 @@ different flags and must never be offered each other's models. Claude lists
 `~/.config/models/claude/*.md` and launches
 `--model <name> --append-system-prompt-file <path>`. Every claude launch adds
 `--remote-control`, so those sessions can be followed from another device; the
-reviewer does not. The reviewer under `\acd` is a
+reviewer does not. The reviewer behind `\aco` is a
 separate agent rather than a claude variant, so a review and a working session stay
 alive side by side in one repository. It adds
 `--disallowedTools Edit Write NotebookEdit Agent`, which also keeps it from
 delegating an edit to a subagent, and a prompt forbidding writes through Bash and
 installing, deploying, or publishing targets. Building and testing stay allowed.
 It reuses the claude family's continue/verbose toggles but never takes yolo, and
-starting it from `\ap` goes through the same model picker as `\acd`. The
+starting it from `\ap` goes through a model picker. The
 prompt asks for proposals as fenced `diff` blocks with `---`/`+++` headers and
 `@@` hunk lines, so each one says where it lands. Because claude refuses `--append-system-prompt` together with
 `--append-system-prompt-file`, it inlines the picked model's prompt file and
@@ -287,9 +288,9 @@ so it has no prompt flag to pair with a model.
 
 `\aco` turns on pair programming on save for this repository
 (`lua/agent-observer.lua`). It starts the reviewer if it is not running and leaves
-you in your buffer. Nothing polls: each `:w` starts a 2-second timer, so a burst of
-saves becomes one message holding that batch's diff, and a save with no change sends
-nothing. The reviewer comments only, proposes edits as diff hunks and replies
+you in your buffer. Nothing polls: a `:w` is sent at once and opens a 2-second window,
+and saves inside it go together as one message when it closes, so a burst of saves
+costs at most one message every 2 seconds. A save with no change sends nothing. The reviewer comments only, proposes edits as diff hunks and replies
 `looks good` when there is nothing to raise; if its window is hidden, anything else
 raises a notification. Those instructions go with the first diff of a session
 and again after `/clear`, a resume or a compaction, so later saves send only the
@@ -300,7 +301,37 @@ working or while you are typing in its terminal. An unsent draft left in its pro
 is submitted together with the next message, because nvim cannot see it. A turn you
 interrupt ends without claude's Stop hook, so saves stay held until its idle
 notification arrives, about a minute later, or until your next prompt finishes.
-Opencode and cursor have no observer yet, so `\aoo` and `\auo` only say so.
+Cursor has no observer or mentor yet, so `\auo` only says so.
+
+`\acm` starts the mentor, for when you do not know how to do something yet but
+want to write it yourself; the observer is for when you know how and want a second
+pair of eyes. The mentor is a separate `mentor` agent with the reviewer's flags and
+read-only rules plus a mentor prompt. You state your goal in its terminal and it
+replies with a numbered plan and only the first step, as a diff for you to type.
+Every save goes to it the same way as to the observer, for as long as the session
+lives, with no toggle. It checks each save line by line against the current step before
+deciding, ends its reply with `Step N done` or `Step N: <what is wrong>`, stays on a
+step until it is right, then gives the next one, and says `Goal done` after the last.
+A save that comes before any goal makes it read what it needs, say what it guessed,
+and carry on mentoring toward that guess without waiting for you. Its role is in its system prompt rather than sent with the
+diffs, because the goal comes before the first save. With its window hidden, the
+last line of each reply, its verdict, raises a notification. `\acm` starts it in the background
+like `\aco`, leaving you in your buffer, so you switch to its window to state your
+goal. Once it runs, `\acm` shows or hides it.
+
+`\aom` and `\aoo` are the same mentor and observer on opencode, as the agents
+`oc-mentor` and `oc-review`, through opencode's model picker. They set
+`OPENCODE_CONFIG_CONTENT`, which opencode merges over the user's config for that
+launch only, to add two agents, `mentor` and `observer`, and the plugin
+`scripts/agent-state.ts`. So nothing is installed under `~/.config/opencode` and
+other opencode sessions never load them. The agents deny `edit`, which covers every
+file-writing tool, and `task`, ask before each `bash` command, and carry the same
+read-only and role prompts as claude's. The mentor also sets `think: true`, which overrides a model config that turns
+thinking off, such as `qwen3:8b` in `~/.config/opencode/opencode.jsonc`. An opencode agent's prompt replaces
+opencode's default prompt rather than adding to it, and a model-paired prompt from
+`~/.config/opencode/agent` is not used. The plugin reports `start`, `busy`, `stop`
+with the last reply, and `compact` through `scripts/agent-state.lua`, as claude's
+hooks do. An interrupted opencode turn goes idle at once, so it does not hold saves.
 
 Opening or toggling an agent lands in insert mode, but nothing re-enters insert on
 `WinEnter`, so leaving with `<C-\><C-n>` and switching windows keeps the scrollback
