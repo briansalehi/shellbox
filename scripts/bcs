@@ -724,7 +724,7 @@ def main():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("-d", "--date", type=parse_date, default=datetime.date.today(),
                         help="YYYY-MM-DD, today or yesterday (default today)")
-    commands = parser.add_subparsers(dest="command", required=True)
+    commands = parser.add_subparsers(dest="command")
     listing = commands.add_parser("list", parents=[common], help="list tasks and bookings of a day")
     listing.add_argument("-w", "--week", action="store_true", help="list the bookings of the whole week")
     booking = commands.add_parser("book", parents=[common], help="book a time range on a task")
@@ -739,6 +739,9 @@ def main():
     closing.add_argument("date", type=parse_date, help="last day to close, YYYY-MM-DD, today or yesterday")
     closing.add_argument("-n", "--dry-run", action="store_true", help="print the closing request instead of sending it")
     args = parser.parse_args()
+    if args.command is None:
+        parser.print_help()
+        return 0
 
     disconnect = False
     try:
