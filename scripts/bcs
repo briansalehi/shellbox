@@ -738,9 +738,15 @@ def main():
     closing = commands.add_parser("close", help="set the booking closure to a special closure date")
     closing.add_argument("date", type=parse_date, help="last day to close, YYYY-MM-DD, today or yesterday")
     closing.add_argument("-n", "--dry-run", action="store_true", help="print the closing request instead of sending it")
+    listing = commands.add_parser("version", parents=[common], help="show current version")
     args = parser.parse_args()
+
     if args.command is None:
         parser.print_help()
+        return 0
+
+    if args.command == "version":
+        print("0.1.0")
         return 0
 
     disconnect = False
